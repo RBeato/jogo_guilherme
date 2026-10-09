@@ -1037,6 +1037,9 @@ const Render = (() => {
 
   // ---------- Câmaras ----------
   const cam = { x: 0, z: 0, fov: 26 };
+  const alvoPos = new THREE.Vector3(), alvoOlhar = new THREE.Vector3();
+  const camPos = new THREE.Vector3(0, 250, 600), camOlhar = new THREE.Vector3();
+  let modoCamara = 'tv', transicao = 1;
   const olhar = new THREE.Vector3();
   function atualizarCamara(v, dt) {
     if (state === 'titulo' || !ball) {
@@ -1065,8 +1068,8 @@ const Render = (() => {
       camera.updateProjectionMatrix();
       return;
     }
+    // Câmara de TV (de lado), que vai um bocadinho à frente da jogada
     const k = Math.min(1, dt * 2.5);
-    // A câmara de TV vai um bocadinho à frente da jogada
     let tx = clamp(X(b.x) + b.vx * 0.25, -W / 2 + 190, W / 2 - 190);
     let tz = Z(b.y) * 0.55;
     let fov = 28;
@@ -1076,11 +1079,33 @@ const Render = (() => {
     cam.x += (tx - cam.x) * k;
     cam.z += (tz - cam.z) * k;
     cam.fov += (fov - cam.fov) * Math.min(1, dt * 1.5);
-    camera.fov = cam.fov;
+    alvoPos.set(cam.x * 0.8, 250, 600);
+    alvoOlhar.set(cam.x, 0, cam.z + 20);
+    let alvoFov = cam.fov;
+    let modo = 'tv';
+
+    // Livres e penáltis: câmara atrás de quem vai bater, a olhar para a baliza (como no FC)
+    if (state === 'parada' && setPiece && setPiece.taker && (setPiece.tipo === 'livre' || setPiece.tipo === 'penalti')) {
+      modo = 'livre';
+      const goalX = setPiece.team === 0 ? W : 0;
+      const a = Math.atan2(H / 2 - b.y, goalX - b.x);
+      const bx = X(b.x), bz = Z(b.y);
+      // Um pouco atrás, por cima e ao lado de quem bate, para se ver a bola, a barreira e a baliza
+      const px = -Math.sin(a), pz = Math.cos(a);
+      alvoPos.set(bx - Math.cos(a) * 105 + px * 24, 46, bz - Math.sin(a) * 105 + pz * 24);
+      alvoOlhar.set(bx + Math.cos(a) * 170, 14, bz + Math.sin(a) * 170);
+      alvoFov = 50;
+    }
+    // Ao trocar de câmara, desliza suavemente em vez de saltar
+    if (modo !== modoCamara) { modoCamara = modo; transicao = 0; }
+    transicao = Math.min(1, transicao + dt * 1.2);
+    const suave = transicao >= 1 ? 1 : Math.min(1, dt * 3.5);
+    camPos.lerp(alvoPos, suave);
+    camOlhar.lerp(alvoOlhar, suave);
+    camera.fov += (alvoFov - camera.fov) * suave;
     camera.updateProjectionMatrix();
-    camera.position.set(cam.x * 0.8, 250, 600);
-    olhar.set(cam.x, 0, cam.z + 20);
-    camera.lookAt(olhar);
+    camera.position.copy(camPos);
+    camera.lookAt(camOlhar);
   }
 
   // ---------- Ecrã ----------
@@ -1127,7 +1152,7 @@ const Render = (() => {
     }
     marcadores.forEach((g, t) => {
       const p = human[t];
-      g.visible = !!(emJogo && p && !v.replay && state !== 'golo' && state !== 'fim');
+      g.visible = !!(emJogo && p && !v.replay && state !== 'golo' && state !== 'fim' && modoCamara !== 'livre');
       if (g.visible) {
         g.position.set(X(p.x), 0, Z(p.y));
         g.userData.seta.position.y = 32 + Math.sin(tempo.value * 6) * 1.5;

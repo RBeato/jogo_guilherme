@@ -243,6 +243,8 @@ const Hud = (() => {
 
   // Etiqueta J1/J2 por cima da cabeça, barra de força, e setas se estiver fora do ecrã
   function etiquetas() {
+    // Na câmara atrás do jogador (livres e penáltis) as etiquetas atrapalham
+    if (state === 'parada' && setPiece && (setPiece.tipo === 'livre' || setPiece.tipo === 'penalti')) return;
     for (let t = 0; t < 2; t++) {
       const p = human[t];
       if (!p || state === 'golo' || state === 'fim') continue;
@@ -290,8 +292,9 @@ const Hud = (() => {
     if (state !== 'parada' || !setPiece || !setPiece.taker || setPiece.taker.gk) return;
     const t = setPiece.team;
     const k = t === 0 ? 'W A S D apontar · F passar · G rematar' : 'Setas apontar · K passar · L rematar';
-    caixa(canvas.width / 2 - 200 * s, canvas.height - 190 * s, 400 * s, 30 * s, 'rgba(8,12,28,0.8)', 6);
-    texto(`J${t + 1}: ${k}`, canvas.width / 2, canvas.height - 170 * s, 14, COR_J[t], 'center', '700');
+    // Dica em cima (por baixo do aviso do árbitro), para não tapar a jogada
+    caixa(canvas.width / 2 - 200 * s, 164 * s, 400 * s, 30 * s, 'rgba(8,12,28,0.8)', 6);
+    texto(`J${t + 1}: ${k}`, canvas.width / 2, 184 * s, 14, COR_J[t], 'center', '700');
   }
 
   function textoGrande(linhas) {
@@ -408,7 +411,8 @@ const Hud = (() => {
     aviso_();
     painelJogador(0);
     painelJogador(1);
-    minimapa();
+    // Nos livres e penáltis a câmara está atrás do jogador: o minimapa tapava a jogada
+    if (!(state === 'parada' && setPiece && (setPiece.tipo === 'livre' || setPiece.tipo === 'penalti'))) minimapa();
     dicaBolaParada();
     if (state === 'inicio') textoGrande([['PRONTOS?', 52, '#fff']]);
     if (state === 'golo') textoGrande([['GOLO!', 110, '#ffd60a'], [marcador, 30, '#fff'], [EQUIPAS[lastScorer].nome, 20, '#c8d0e0']]);

@@ -231,6 +231,7 @@ function kick(p, angle, speed, lift = 0) {
   ball.vy = Math.sin(angle) * speed;
   ball.vz = lift;
   ball.curva = 0;
+  ball.dip = 0;
   ball.ps = p.ps;
   Som.chuto(speed);
   ball.lastTouch = p;
@@ -249,18 +250,18 @@ function cabecear(p) {
     // Perto da baliza: cabeceia para a baliza, para baixo
     const ty = H / 2 + (Math.random() - 0.5) * (GOAL_W - 30);
     ang = Math.atan2(ty - p.y, goalX - p.x);
-    vel = 420 + Math.random() * 130;
+    vel = 360 + Math.random() * 100;
     lift = -60;
   } else {
     ang = direcao(p);
-    vel = 300;
+    vel = 260;
     lift = 140;
   }
   kick(p, ang, vel, lift);
   if (perto) {
     ball.remate = true;
     ball.colocado = Math.random() < 0.5;
-    ball.potente = vel > 490;
+    ball.potente = vel > 430;
   }
   p.cabeceou = 0.45;
   p.cooldown = 0.35;
@@ -277,13 +278,15 @@ function direcao(p) {
 }
 
 function shoot(p, power) {
+  const deLivre = state === 'parada' && setPiece && setPiece.tipo === 'livre';
   const f = direcao(p);
   let angle = f, colocado = false, curva = 0;
   const goalX = p.team === 0 ? W : 0;
   const toGoal = Math.atan2(H / 2 - p.y, goalX - p.x);
   const finesse = p.ps === 'Remate Colocado';
   const potentePS = p.ps === 'Remate Potente';
-  const velocidade = (380 + power * 520) * (potentePS ? 1.12 : 1) * (0.88 + atr(p, 'rem') / 100 * 0.17);
+  // Força do remate (o Guilherme achou que estava forte demais: o máximo passou de ~1000 para ~650)
+  const velocidade = (300 + power * 330) * (potentePS ? 1.1 : 1) * (0.9 + atr(p, 'rem') / 100 * 0.12);
   // Virado para a baliza: na diagonal remata para um canto, a direito remata ao meio
   if (angDiff(f, toGoal) < Math.PI / 3 && Math.abs(goalX - p.x) < 450) {
     const vert = Math.sin(f);
@@ -295,7 +298,7 @@ function shoot(p, power) {
     angle = Math.atan2(dy, dx);
     if (colocado && !(power > 0.85 && !finesse)) {
       // Remate em arco: sai por fora do poste e a curva traz a bola para dentro
-      const acel = finesse ? 950 : 550;
+      const acel = finesse ? 600 : 350;
       const T = d / (velocidade * 0.9);
       const desvio = 0.5 * acel * T * T * 0.7;
       const sinal = -lado * Math.sign(Math.cos(angle) || 1);
@@ -307,7 +310,19 @@ function shoot(p, power) {
   const erro = potentePS ? 0.03 : finesse && colocado ? 0.02 : power > 0.85 ? 0.1 : 0.05;
   angle += (Math.random() - 0.5) * erro * (1.6 - atr(p, 'rem') / 100);
   const lift = potentePS ? 35 + power * 90 : curva ? 90 + power * 100 : 60 + power * 150;
-  kick(p, angle, velocidade, lift + Math.random() * 25);
+  const goalXL = p.team === 0 ? W : 0;
+  if (deLivre && Math.hypot(goalXL - ball.x, H / 2 - ball.y) < 420) {
+    // Livre direto: altura certa para passar por cima das cabeças da barreira
+    // (que alcançam a bola a uns 55 de distância) e efeito para baixo (cai a pique)
+    const tBarreira = 55 / velocidade;
+    let vz = (33 + 750 * tBarreira * tBarreira) / tBarreira;
+    // Às vezes sai baixo e bate na barreira (mais vezes com força a mais)
+    if (Math.random() < (power > 0.85 ? 0.4 : 0.2)) vz *= 0.8;
+    kick(p, angle, velocidade, vz);
+    ball.dip = 600;
+  } else {
+    kick(p, angle, velocidade, lift + Math.random() * 25);
+  }
   ball.curva = curva;
   ball.ps = p.ps;
   ball.potente = power > (potentePS ? 0.5 : 0.7);
@@ -333,7 +348,7 @@ function pass(p) {
   // Passa para onde o colega vai estar
   const incisivo = p.ps === 'Passe Incisivo';
   const d = dist(p, best);
-  const speed = clamp(d * 1.5 + 160, 260, 650) * (incisivo ? 1.2 : 1);
+  const speed = clamp(d * 1.3 + 150, 240, 520) * (incisivo ? 1.15 : 1);
   const t = d / speed;
   // Passe Incisivo: põe a bola no espaço à frente do colega, a caminho da baliza
   const frente = incisivo && !best.gk && d > 120 ? 60 : 0;
@@ -433,6 +448,12 @@ function updateGoalkeeper(p, dt) {
 function updateAI(p, dt) {
   if (p.gk) return updateGoalkeeper(p, dt);
   if (state === 'parada' && setPiece && setPiece.taker === p) { p.vx = p.vy = 0; return; }
+  if (state === 'parada' && p.barreira) {
+    moveTowards(p, p.barreira.x, p.barreira.y, 60, dt);
+    p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
+    return;
+  }
+  p.barreira = null;
   let target = aiTarget(p);
   // Um colega ajuda a pressionar se o adversário tem a bola no nosso meio-campo
   const inOwnHalf = p.team === 0 ? ball.x < W * 0.55 : ball.x > W * 0.45;
@@ -464,9 +485,9 @@ function updateHuman(p, t, dt) {
     p.vx = p.vy = 0;
     if (len) p.facing = p.mira = Math.atan2(dy, dx);
     if (pressed.has(k.b2)) { charging[t] = true; charge[t] = 0; }
-    if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 0.9);
+    if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 1.1);
     if (released.has(k.b2) && charging[t]) {
-      if (setPiece.tipo === 'lateral') kick(p, p.facing, 300 + charge[t] * 150, 150);
+      if (setPiece.tipo === 'lateral') kick(p, p.facing, 260 + charge[t] * 120, 150);
       else shoot(p, charge[t]);
       charging[t] = false; charge[t] = 0;
     }
@@ -509,7 +530,7 @@ function updateHuman(p, t, dt) {
   } else p.corrida = 0;
 
   // Larga o botão 2 para rematar
-  if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 0.9);
+  if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 1.1);
   if (released.has(k.b2) && charging[t]) {
     if (canTouchBall(p)) shoot(p, charge[t]);
     else p.pendente = { forca: charge[t], t: 0.4 };   // remata quando a bola chegar
@@ -606,7 +627,7 @@ function placeSetPiece() {
   // Expulsos saem do campo
   players = players.filter(p => !p.expulso);
   for (let t = 0; t < 2; t++) if (!players.includes(human[t])) human[t] = frontPlayer(t);
-  for (const p of players) { p.slide = p.chao = p.stun = 0; p.vx = p.vy = 0; }
+  for (const p of players) { p.slide = p.chao = p.stun = 0; p.vx = p.vy = 0; p.barreira = null; }
 
   ball.x = sp.x; ball.y = sp.y; ball.z = 0; ball.vx = ball.vy = ball.vz = 0;
   const goalX = sp.team === 0 ? W : 0;
@@ -638,7 +659,30 @@ function placeSetPiece() {
       if (p === taker) continue;
       if (p.gk && p.team === def) { p.x = def === 0 ? 8 : W - 8; p.y = H / 2; p.facing = def === 0 ? 0 : Math.PI; continue; }
       if (p.gk) continue;
-      p.x = box; p.y = clamp(p.y, 40, H - 40);
+      // Fora da área e afastados do meio, para não taparem a câmara atrás de quem bate
+      p.x = box;
+      p.y = clamp(p.y, 40, H - 40);
+      if (Math.abs(p.y - H / 2) < 85) p.y = H / 2 + (p.y < H / 2 ? -85 : 85) + (Math.random() - 0.5) * 30;
+    }
+  }
+  sp.barreira = [];
+  if (sp.tipo === 'livre') {
+    const goalX = sp.team === 0 ? W : 0;
+    const dx = goalX - ball.x, dy = H / 2 - ball.y;
+    const dGolo = Math.hypot(dx, dy);
+    if (dGolo < 400) {
+      // Barreira: 3 defesas a 70 da bola, na linha entre a bola e a baliza
+      const ux = dx / dGolo, uy = dy / dGolo;
+      const defensores = players.filter(p => p.team !== sp.team && !p.gk)
+        .sort((a, b) => dist(a, ball) - dist(b, ball)).slice(0, 3);
+      defensores.forEach((p, i) => {
+        const lado = (i - (defensores.length - 1) / 2) * (PLAYER_R * 2 + 1);
+        p.x = ball.x + ux * 72 - uy * lado;
+        p.y = ball.y + uy * 72 + ux * lado;
+        p.facing = Math.atan2(-uy, -ux);
+        p.barreira = { x: p.x, y: p.y };
+        sp.barreira.push(p);
+      });
     }
   }
   if (sp.tipo === 'canto') {
@@ -719,10 +763,11 @@ function updateBall(dt) {
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
     ball.z += ball.vz * dt;
-    ball.vz -= GRAVIDADE * dt;
+    ball.vz -= (GRAVIDADE + (ball.dip || 0)) * dt;
     if (ball.z <= 0) {
       // Quando cai, a bola salta e perde um pouco de velocidade
       ball.z = 0;
+      ball.dip = 0;
       if (ball.vz < -80) { ball.vz = -ball.vz * 0.5; ball.vx *= 0.9; ball.vy *= 0.9; }
       else ball.vz = 0;
     }
@@ -765,7 +810,7 @@ function handlePossession() {
     }
     if (ball.z > (p.gk ? 45 : 14)) continue;
     // Bola muito rápida bate no corpo do jogador e ressalta
-    if (!ball.owner && !p.gk && ballSpeed >= 520 && d < PLAYER_R + BALL_R && ball.lastTouch !== p) {
+    if (!ball.owner && !p.gk && ballSpeed >= 420 && d < PLAYER_R + BALL_R && ball.lastTouch !== p) {
       const nx = (ball.x - p.x) / (d || 1), ny = (ball.y - p.y) / (d || 1);
       const vn = ball.vx * nx + ball.vy * ny;
       if (vn < 0) {
@@ -785,27 +830,27 @@ function handlePossession() {
     // O GR tenta defender a bola que lhe passa perto OU um remate à baliza ao alcance do mergulho
     const linhaGolo = p.team === 0 ? 0 : W;
     const vaiParaBaliza = (linhaGolo - ball.x) * ball.vx > 0;
-    const alcanceMergulho = vaiParaBaliza && ballSpeed >= 300 &&
+    const alcanceMergulho = vaiParaBaliza && ballSpeed >= 220 &&
       Math.abs(ball.x - p.x) < 22 && Math.abs(ball.y - p.y) < (p.ps === 'Reflexos' ? 92 : 85);
     if (p.gk && !ball.owner && p.gkShot !== shotId && (d < PLAYER_R + 30 || alcanceMergulho)) {
       // Regra do Guilherme: o GR defende se o remate não for potente nem colocado
       p.gkShot = shotId;
       const lado = ball.y - p.y;
-      if (ballSpeed > 300 && Math.abs(lado) > 8) {
+      if (ballSpeed > 250 && Math.abs(lado) > 8) {
         // Atira-se para o lado da bola
         p.mergulho = 0.7; p.mergulhoDir = Math.sign(lado);
         p.vy = Math.sign(lado) * (p.ps === 'Reflexos' ? 280 : 230); p.vx = 0;
       }
       let chance;
-      if (ballSpeed < 350) chance = 1;
+      if (ballSpeed < (ball.remate ? 200 : 350)) chance = 1;
       else if (ball.potente && ball.colocado) chance = 0.1;
       else if (ball.potente || ball.colocado) chance = 0.35;
       else chance = 0.95;
       if (ball.colocado && ball.ps === 'Remate Colocado') chance *= 0.6;
       if (p.ps === 'Reflexos' && ballSpeed >= 350) chance = Math.min(1, chance + 0.05);
-      if (ballSpeed >= 350) chance = clamp(chance + (atr(p, 'ref') - 86) / 100, 0, 1);
+      if (ballSpeed >= 200) chance = clamp(chance + (atr(p, 'ref') - 86) / 100, 0, 1);
       const r = Math.random();
-      if (r < chance && Math.abs(lado) > 34 && ballSpeed >= 350) {
+      if (r < chance && Math.abs(lado) > 34 && ballSpeed >= 250) {
         // Defesa a mergulhar: longe do corpo não dá para agarrar, desvia a bola para fora
         ball.vx = -Math.sign(ball.vx) * (60 + Math.random() * 90);
         ball.vy = Math.sign(lado) * (220 + Math.random() * 160);
@@ -826,7 +871,7 @@ function handlePossession() {
           if (p.ps === 'Reflexos') psAtivo(p);
         }
       }
-      else if (r < chance + 0.2 && d < PLAYER_R + 12) {
+      else if (r < chance + 0.1 && d < PLAYER_R + 12) {
         // Toca na bola mas não a agarra
         ball.vx *= -0.3; ball.vy = (Math.random() - 0.5) * 350; ball.lastTouch = p;
       }

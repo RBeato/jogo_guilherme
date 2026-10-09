@@ -27,6 +27,11 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - O botão 2 só faz carrinho quando é o **adversário** que tem a bola. Com a bola solta ou com
   um colega, carrega o remate — dá para **rematar de primeira** quando a bola chega.
 - O **guarda-redes é sempre controlado pelo computador**.
+- Força dos remates reduzida a pedido do Guilherme (o remate mais forte tem ~2/3 da força antiga)
+  e a barra de força demora mais a encher.
+- Nos **livres e penáltis** a câmara fica **atrás de quem bate**, a olhar para a baliza.
+  Nos livres perto da área há **barreira** de 3 jogadores: a bola tem de passar por cima
+  (às vezes bate na barreira; com força a mais vai por cima da trave).
 - Fintas: ainda por decidir como fazer sem acrescentar teclas.
 
 ## 3. Câmara e visual
