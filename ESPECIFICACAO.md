@@ -100,11 +100,26 @@ Fortaleza Aérea) só entram se o jogo tiver bola no ar — ver secção 8.
 - **Bola no ar**: em vista de cima, a altura da bola é mostrada com uma sombra.
   Precisa disto para chapéus, cruzamentos e cabeceamentos.
 
-## 9. Plano por fases
+## 9. Regra do guarda-redes (decidida pelo Guilherme)
 
-1. **Fase 1** — campo, bola, 5v5, andar/passar/rematar, golos, placar, 2 jogadores
-2. **Fase 2** — computador a jogar (fácil/médio/difícil), guarda-redes, menu
-3. **Fase 3** — sprint, carrinho, fintas, barra de força, faltas, cartões, cantos, laterais
+O guarda-redes **defende se o remate não for potente nem colocado**:
+
+| Remate                     | O GR defende |
+|----------------------------|--------------|
+| Fraco e ao meio            | quase sempre |
+| Potente **ou** colocado    | às vezes (35%) |
+| Potente **e** colocado     | raramente (10%) |
+
+- **Potente** = segurar a tecla de rematar até a barra passar dos 70%.
+- **Colocado** = rematar na diagonal (ex: D+W ou D+S) virado para a baliza → vai para o canto.
+
+## 10. Plano por fases
+
+1. **Fase 1** ✅ — campo, bola, 5v5, andar/passar/rematar, golos, placar, 2 jogadores
+   - ✅ adiantado: carrinho, faltas, cartões amarelo/vermelho, livres, penáltis,
+     cantos, lançamentos laterais, pontapés de baliza
+2. **Fase 2** — computador a jogar (fácil/médio/difícil), menu
+3. **Fase 3** — sprint, fintas
 4. **Fase 4** — equipas reais, nomes, PlayStyles com efeito, painel no fundo do ecrã
 5. **Fase 5** — 7v7 e 11v11, fora de jogo, modo penáltis, modo treino
 6. **Fase 6** — sons, repetição, celebrações, estatísticas
