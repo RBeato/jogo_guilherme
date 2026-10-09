@@ -1,6 +1,6 @@
 # Jogo de Futebol do Guilherme — Especificação
 
-Jogo de futebol 2D, inspirado no FC 26, para 1 ou 2 jogadores no mesmo teclado.
+Jogo de futebol 3D, inspirado no FC 26, para 1 ou 2 jogadores no mesmo teclado.
 Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é preciso instalar nada.
 
 ## 1. Ecrã inicial (menu)
@@ -15,30 +15,27 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
   - quantos golos para ganhar (**primeiro a 3, 5 ou 7**)
   - fora de jogo: **ligado / desligado**
 
-## 2. Controlos
+## 2. Controlos (só 2 botões — decidido pelo Guilherme)
 
-| Ação            | Jogador 1        | Jogador 2         |
-|-----------------|------------------|-------------------|
-| Andar           | W A S D          | Setas             |
-| Rematar         | F (segurar = mais força) | Enter (segurar = mais força) |
-| Passar          | G                | Shift direito     |
-| Correr (sprint) | Shift esquerdo   | Ctrl direito      |
-| Carrinho        | Q                | . (ponto)         |
-| Finta           | E                | , (vírgula)       |
-| Mudar jogador   | R                | / (barra)         |
+| Ação                         | Jogador 1 | Jogador 2 |
+|------------------------------|-----------|-----------|
+| Andar                        | W A S D   | Setas     |
+| Botão 1: com bola **passar** · sem bola **mudar de jogador** | F | K |
+| Botão 2: com bola **rematar** (segurar = força) · sem bola **carrinho** | G | L |
 
+- Correr é automático (não há tecla de sprint).
 - O **guarda-redes é sempre controlado pelo computador**.
-- O remate tem **barra de força**: quanto mais tempo se segura a tecla, mais forte.
-- O sprint tem **barra de energia** que gasta e recupera.
+- Fintas: ainda por decidir como fazer sem acrescentar teclas.
 
 ## 3. Câmara e visual
 
-- Vista **de cima**, a **câmara segue a bola**.
-- Estilo **realista-simples**: relva com riscas, linhas do campo, balizas com rede,
-  jogadores vistos de cima com camisola, calções e número.
-- **No fundo do ecrã**: nome do jogador selecionado + o seu **PlayStyle**
-  (um para cada jogador, para J1 à esquerda e J2 à direita).
-- Placar no topo: equipas, golos, e quantos golos faltam para ganhar.
+- **3D**, com **câmara de TV**: vista de lado, da bancada, a seguir a bola.
+- Estádio à noite com holofotes, bancadas cheias de adeptos que saltam nos golos,
+  placas de publicidade LED, balizas com rede, relva com riscas.
+- Jogadores 3D simples (sem cara), com camisola, número nas costas, calções e meias.
+- **No fundo do ecrã**: **nome do jogador em destaque** + **emblema dourado do PlayStyle**
+  (J1 à esquerda, J2 à direita).
+- Sons: público, apito, chuto, grito de golo.
 
 ## 4. Equipas
 
@@ -50,6 +47,7 @@ Nomes reais e cores das camisolas (sem emblemas oficiais nem fotografias):
 - **Equipas inventadas** — o Guilherme escolhe nome e cores
 
 Os jogadores têm **nomes reais**. Cada jogador tem um PlayStyle.
+Por agora o jogo é sempre **Portugal vs França** (5 jogadores cada).
 
 ## 5. Regras
 

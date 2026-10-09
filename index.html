@@ -5,12 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Futebol 26</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #0b1d10; overflow: hidden; }
-    canvas { display: block; width: 100vw; height: 100vh; }
+    html, body { margin: 0; height: 100%; background: #050a1c; overflow: hidden; }
+    canvas { position: fixed; inset: 0; display: block; width: 100vw; height: 100vh; }
+    #hud { pointer-events: none; }
   </style>
 </head>
 <body>
-  <canvas id="jogo"></canvas>
+  <canvas id="jogo3d"></canvas>
+  <canvas id="hud"></canvas>
+  <script src="lib/three.min.js"></script>
+  <script src="audio.js"></script>
   <script src="game.js"></script>
+  <script src="render3d.js"></script>
+  <script src="hud.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
