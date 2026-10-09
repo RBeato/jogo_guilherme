@@ -48,7 +48,7 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - Cabeceamentos com bolas altas.
 - Narrador em português (voz do computador; tecla N liga/desliga). Só fala se o computador
   tiver uma voz em português instalada.
-- Bancos de suplentes com treinadores; adeptos com bandeiras de Portugal e França.
+- Bancos de suplentes com treinadores; adeptos com bandeiras das duas equipas.
 - Se o computador for lento, o jogo baixa a qualidade sozinho.
 
 ## 4. Equipas
