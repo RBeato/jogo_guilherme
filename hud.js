@@ -295,6 +295,18 @@ const Hud = (() => {
   function desenhar() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (state === 'titulo' || !ball) return titulo();
+    if (state === 'replay') {
+      placar();
+      // Letreiro de repetição, como na TV
+      const piscar = Math.floor(performance.now() / 600) % 2 === 0;
+      caixa(canvas.width - 250 * s, 16 * s, 234 * s, 40 * s, 'rgba(8,12,28,0.9)', 6);
+      ctx.fillStyle = piscar ? '#ef233c' : '#7a1020';
+      ctx.beginPath(); ctx.arc(canvas.width - 228 * s, 36 * s, 7 * s, 0, Math.PI * 2); ctx.fill();
+      texto('REPETIÇÃO', canvas.width - 210 * s, 44 * s, 22, '#fff', 'left', '900');
+      texto(`${marcador}`, canvas.width / 2, canvas.height - 60 * s, 26, '#ffd60a', 'center', '900');
+      texto('ESPAÇO para saltar', canvas.width / 2, canvas.height - 30 * s, 14, '#c8d0e0', 'center', '600');
+      return;
+    }
     etiquetas();
     placar();
     aviso_();

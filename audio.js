@@ -103,5 +103,45 @@ const Som = (() => {
   function golo() { if (grito) { animar(grito, 1.6, 4.5); } }
   function defesa() { if (grito) animar(grito, 0.5, 1.5); }
 
-  return { iniciar, apito, chuto, golo, defesa };
+  // "Uuuuh!" do público quando a bola passa perto do poste
+  function uh() {
+    if (!ac) return;
+    const t = ac.currentTime;
+    const src = ac.createBufferSource();
+    src.buffer = ruido; src.loop = true;
+    const f = ac.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 4;
+    f.frequency.setValueAtTime(380, t);
+    f.frequency.linearRampToValueAtTime(260, t + 1.4);   // a voz desce, como um "uuuh"
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(2.2, t + 0.2);
+    g.gain.linearRampToValueAtTime(0, t + 1.5);
+    src.connect(f).connect(g).connect(ac.destination);
+    src.start(t); src.stop(t + 1.6);
+  }
+
+  // Palmas ritmadas da bancada: "palma, palma, palma-palma-palma"
+  function palma(quando, vol) {
+    const src = ac.createBufferSource();
+    src.buffer = ruido;
+    const f = ac.createBiquadFilter();
+    f.type = 'highpass'; f.frequency.value = 1200;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(vol, quando);
+    g.gain.exponentialRampToValueAtTime(0.001, quando + 0.09);
+    src.connect(f).connect(g).connect(ac.destination);
+    src.start(quando, Math.random() * 2, 0.1);
+  }
+  function palmas() {
+    if (!ac) return;
+    const t = ac.currentTime + 0.05;
+    for (let rep = 0; rep < 3; rep++) {
+      const b = t + rep * 1.6;
+      for (const dt of [0, 0.4, 0.8, 1.0, 1.2]) palma(b + dt, 1.2);
+    }
+  }
+  setInterval(() => { if (ac && Math.random() < 0.5) palmas(); }, 14000);
+
+  return { iniciar, apito, chuto, golo, defesa, uh };
 })();

@@ -128,6 +128,7 @@ const Render = (() => {
     return new THREE.Mesh(geo, matRede);
   }
 
+  const redesFundo = [];
   function baliza(lado) {
     const g = new THREE.Group();
     const r = 1.6, hw = GOAL_W / 2, hb = GOAL_H * 0.75;
@@ -146,7 +147,14 @@ const Render = (() => {
     trave.position.set(0, GOAL_H, 0);
     g.add(trave);
     const V = (x, y, z) => new THREE.Vector3(x, y, z);
-    g.add(rede(V(-GOAL_D, 0, -hw), V(-GOAL_D, 0, hw), V(-GOAL_D, hb, hw), V(-GOAL_D, hb, -hw)));  // fundo
+    // Rede do fundo dividida em muitos quadrados, para poder abanar no golo
+    const fundo = new THREE.PlaneGeometry(GOAL_W, hb, 24, 10);
+    fundo.rotateY(Math.PI / 2);
+    fundo.translate(-GOAL_D, hb / 2, 0);
+    const uv = fundo.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * GOAL_W / 5, uv.getY(i) * hb / 5);
+    g.add(new THREE.Mesh(fundo, matRede));
+    redesFundo[lado] = { geo: fundo, base: Float32Array.from(fundo.attributes.position.array) };
     g.add(rede(V(0, GOAL_H, -hw), V(0, GOAL_H, hw), V(-GOAL_D, hb, hw), V(-GOAL_D, hb, -hw)));    // cima
     for (const s of [-1, 1]) {
       g.add(rede(V(0, 0, s * hw), V(-GOAL_D, 0, s * hw), V(-GOAL_D, hb, s * hw), V(0, GOAL_H, s * hw)));
@@ -327,19 +335,30 @@ const Render = (() => {
     scene.add(torre, painel, brilho);
   }
 
-  // ---------- Jogadores ----------
-  const geoTronco = new THREE.BoxGeometry(4.2, 7.5, 7.2);
-  const geoCabecaJ = new THREE.SphereGeometry(2.6, 16, 12);
-  const geoCabelo = new THREE.SphereGeometry(2.8, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
-  const geoCalcao = new THREE.BoxGeometry(3.4, 4, 3.3);
-  const geoPerna = new THREE.BoxGeometry(2.2, 3.6, 2.2);
-  const geoMeia = new THREE.BoxGeometry(2.4, 3.2, 2.4);
-  const geoBota = new THREE.BoxGeometry(3.8, 1.4, 2.5);
-  const geoManga = new THREE.BoxGeometry(2.3, 3, 2.3);
-  const geoBraco = new THREE.BoxGeometry(1.9, 4.2, 1.9);
-  const geoNumero = new THREE.PlaneGeometry(4.6, 4.6);
+  // ---------- Jogadores e árbitros ----------
+  // Bonecos com corpo arredondado, joelhos e cotovelos que dobram.
+  const capsula = (r, l) => new THREE.CapsuleGeometry(r, l, 3, 10);
+  const geo = {
+    tronco: capsula(3.1, 3.0),
+    calcao: new THREE.CylinderGeometry(3.2, 3.6, 3.6, 14),
+    pescoco: new THREE.CylinderGeometry(0.9, 1.05, 1.8, 8),
+    cabeca: new THREE.SphereGeometry(2.35, 16, 12),
+    cabelo: new THREE.SphereGeometry(2.5, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
+    nariz: new THREE.SphereGeometry(0.45, 6, 4),
+    coxa: capsula(1.35, 3.0),
+    canela: capsula(1.1, 3.0),
+    bota: capsula(0.95, 2.3),
+    braco: capsula(0.95, 2.3),
+    antebraco: capsula(0.8, 2.3),
+    mao: new THREE.SphereGeometry(0.95, 8, 6),
+    luva: new THREE.SphereGeometry(1.45, 8, 6),
+    numero: new THREE.PlaneGeometry(4.2, 4.2),
+    pau: new THREE.CylinderGeometry(0.22, 0.22, 7, 5),
+    bandeira: new THREE.PlaneGeometry(3.6, 2.8),
+    cartao: new THREE.BoxGeometry(0.3, 3.2, 2.2),
+  };
   const mat = {};
-  const matDe = (cor) => mat[cor] || (mat[cor] = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.75 }));
+  const matDe = (cor) => mat[cor] || (mat[cor] = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.72 }));
   const texNum = {};
   function matNumero(num, cor) {
     const k = num + cor;
@@ -347,111 +366,190 @@ const Render = (() => {
       const t = canvasTex(64, 64, (g, w, h) => {
         g.clearRect(0, 0, w, h);
         g.fillStyle = cor;
-        g.font = 'bold 48px sans-serif';
+        g.font = 'bold 46px sans-serif';
         g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText(String(num), w / 2, h / 2 + 3);
       });
-      texNum[k] = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.8 });
+      texNum[k] = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.8, depthWrite: false });
     }
     return texNum[k];
   }
   const CABELOS = ['#1b1209', '#3b2412', '#6b4423', '#c9a15b', '#0d0d0d'];
+  const matCartao = { amarelo: new THREE.MeshBasicMaterial({ color: '#ffd60a' }), vermelho: new THREE.MeshBasicMaterial({ color: '#ef233c' }) };
 
-  function criarModelo(p) {
-    const eq = EQUIPAS[p.team];
-    const camisola = p.gk ? eq.gr : eq.camisola;
-    const pele = PELES[(p.num * 7 + p.team * 3) % PELES.length];
+  // kit: { camisola, calcoes, meias, pele, cabelo, numero, corNumero, luvas }
+  function criarBoneco(kit) {
     const raiz = new THREE.Group();
     const corpo = new THREE.Group();
     raiz.add(corpo);
-
-    const tronco = new THREE.Mesh(geoTronco, matDe(camisola));
-    tronco.position.y = 14.4;
-    corpo.add(tronco);
-    const num = new THREE.Mesh(geoNumero, matNumero(p.num, eq.numero));
-    num.position.set(-2.15, 14.8, 0);
-    num.rotation.y = -Math.PI / 2;
-    corpo.add(num);
-    const cabeca = new THREE.Mesh(geoCabecaJ, matDe(pele));
-    cabeca.position.y = 20.8;
-    corpo.add(cabeca);
-    const cabelo = new THREE.Mesh(geoCabelo, matDe(CABELOS[(p.num + p.team) % CABELOS.length]));
-    cabelo.position.set(-0.3, 21.1, 0);
-    corpo.add(cabelo);
-
-    const pernas = [], bracos = [];
+    const mesh = (g, cor, x = 0, y = 0, z = 0) => {
+      const m = new THREE.Mesh(g, typeof cor === 'string' ? matDe(cor) : cor);
+      m.position.set(x, y, z);
+      return m;
+    };
+    const calcao = mesh(geo.calcao, kit.calcoes, 0, 10.4, 0);
+    calcao.scale.set(0.78, 1, 1.05);
+    const tronco = mesh(geo.tronco, kit.camisola, 0, 15.2, 0);
+    tronco.scale.set(0.62, 1, 1.12);
+    corpo.add(calcao, tronco,
+      mesh(geo.pescoco, kit.pele, 0, 20.1, 0),
+      mesh(geo.cabeca, kit.pele, 0.1, 22.3, 0),
+      mesh(geo.cabelo, kit.cabelo, -0.25, 22.6, 0),
+      mesh(geo.nariz, kit.pele, 2.3, 22.1, 0));
+    if (kit.numero !== undefined) {
+      const n = mesh(geo.numero, matNumero(kit.numero, kit.corNumero), -2.0, 15.6, 0);
+      n.rotation.y = -Math.PI / 2;
+      corpo.add(n);
+    }
+    const ancas = [], joelhos = [], ombros = [], cotovelos = [];
     for (const s of [-1, 1]) {
-      const perna = new THREE.Group();
-      perna.position.set(0, 10.6, s * 1.9);
-      const calcao = new THREE.Mesh(geoCalcao, matDe(eq.calcoes));
-      calcao.position.y = -1.8;
-      const canela = new THREE.Mesh(geoPerna, matDe(pele));
-      canela.position.y = -5.4;
-      const meia = new THREE.Mesh(geoMeia, matDe(camisola));
-      meia.position.y = -8.4;
-      const bota = new THREE.Mesh(geoBota, matDe('#111111'));
-      bota.position.set(0.6, -9.9, 0);
-      perna.add(calcao, canela, meia, bota);
-      corpo.add(perna);
-      pernas.push(perna);
+      const anca = new THREE.Group();
+      anca.position.set(0, 10.0, s * 1.85);
+      anca.add(mesh(geo.coxa, kit.pele, 0, -2.4, 0));
+      const joelho = new THREE.Group();
+      joelho.position.y = -4.8;
+      joelho.add(mesh(geo.canela, kit.meias, 0, -2.3, 0));
+      const bota = mesh(geo.bota, '#111111', 0.9, -4.6, 0);
+      bota.rotation.z = Math.PI / 2;
+      joelho.add(bota);
+      anca.add(joelho);
+      corpo.add(anca);
+      ancas.push(anca); joelhos.push(joelho);
 
-      const braco = new THREE.Group();
-      braco.position.set(0, 17.4, s * 4.6);
-      const manga = new THREE.Mesh(geoManga, matDe(camisola));
-      manga.position.y = -1.3;
-      const ante = new THREE.Mesh(geoBraco, matDe(p.gk ? '#f8f9fa' : pele));
-      ante.position.y = -4.8;
-      braco.add(manga, ante);
-      corpo.add(braco);
-      bracos.push(braco);
+      const ombro = new THREE.Group();
+      ombro.position.set(0, 18.6, s * 4.0);
+      ombro.add(mesh(geo.braco, kit.camisola, 0, -1.5, 0));
+      const cotovelo = new THREE.Group();
+      cotovelo.position.y = -3.2;
+      cotovelo.add(mesh(geo.antebraco, kit.pele, 0, -1.5, 0));
+      cotovelo.add(kit.luvas ? mesh(geo.luva, kit.luvas, 0, -3.4, 0) : mesh(geo.mao, kit.pele, 0, -3.2, 0));
+      ombro.add(cotovelo);
+      corpo.add(ombro);
+      ombros.push(ombro); cotovelos.push(cotovelo);
     }
     raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
     scene.add(raiz);
-    return { raiz, corpo, pernas, bracos, fase: Math.random() * 6 };
+    return { raiz, corpo, ancas, joelhos, ombros, cotovelos, fase: Math.random() * 6 };
+  }
+
+  function criarModeloJogador(p) {
+    const eq = EQUIPAS[p.team];
+    const camisola = p.gk ? eq.gr : eq.camisola;
+    return criarBoneco({
+      camisola, calcoes: p.gk ? '#222222' : eq.calcoes, meias: p.gk ? camisola : (eq.meias || camisola),
+      pele: PELES[(p.num * 7 + p.team * 3) % PELES.length],
+      cabelo: CABELOS[(p.num + p.team) % CABELOS.length],
+      numero: p.num, corNumero: eq.numero, luvas: p.gk ? '#f8f9fa' : null,
+    });
+  }
+
+  function criarModeloArbitro(a) {
+    const m = criarBoneco({ camisola: '#111111', calcoes: '#111111', meias: '#111111', pele: '#e0ac69', cabelo: '#1b1209' });
+    // Mão direita: cartão (árbitro) ou bandeira (fiscal)
+    const mao = m.cotovelos[1];
+    if (a.tipo === 'arbitro') {
+      m.cartao = new THREE.Mesh(geo.cartao, matCartao.amarelo);
+      m.cartao.position.set(0, -4.8, 0);
+      m.cartao.visible = false;
+      mao.add(m.cartao);
+    } else {
+      const pau = new THREE.Mesh(geo.pau, matDe('#dddddd'));
+      pau.position.set(0.6, -5.5, 0);
+      const band = new THREE.Mesh(geo.bandeira, new THREE.MeshStandardMaterial({ color: '#ffd60a', side: THREE.DoubleSide }));
+      band.position.set(0.6, -7.2, 1.8);
+      band.rotation.y = Math.PI / 2;
+      mao.add(pau, band);
+    }
+    return m;
+  }
+
+  // Põe o boneco na pose certa: correr, carrinho, mergulho, festa, cartão...
+  function animarBoneco(m, d, dt, pose) {
+    const vel = Math.hypot(d.vx, d.vy);
+    m.fase += vel * dt * 0.11;
+    const amp = Math.min(1, vel / 140);
+    const s = Math.sin(m.fase);
+    m.raiz.position.set(X(d.x), 0, Z(d.y));
+    m.raiz.rotation.y = -d.facing;
+    m.corpo.rotation.set(0, 0, 0);
+    m.corpo.position.set(0, 0, 0);
+    for (let i = 0; i < 2; i++) {
+      const fase = m.fase + i * Math.PI;
+      m.ancas[i].rotation.set(0, 0, Math.sin(fase) * amp * 0.85);
+      m.joelhos[i].rotation.z = -amp * (0.2 + 1.0 * Math.max(0, Math.cos(fase)));
+      m.ombros[i].rotation.set(0, 0, -Math.sin(fase) * amp * 0.75);
+      m.cotovelos[i].rotation.z = 0.35 + amp * 0.75;
+    }
+    m.corpo.rotation.z = -amp * 0.14;                        // inclina-se para a frente a correr
+    m.corpo.position.y = Math.abs(s) * amp * 0.8;
+
+    if (pose === 'carrinho') {
+      m.corpo.rotation.z = 1.2;
+      m.corpo.position.set(-3, 2.5, 0);
+      m.ancas[0].rotation.z = 0.15; m.ancas[1].rotation.z = 0.45;
+      m.joelhos[0].rotation.z = -0.9; m.joelhos[1].rotation.z = 0;
+      m.ombros[0].rotation.z = m.ombros[1].rotation.z = -0.9;
+    } else if (pose === 'mergulho') {
+      const lado = Math.sign(Math.cos(d.facing) || 1) * d.mergulhoDir;
+      const k = Math.min(1, (0.7 - d.mergulho) / 0.15);
+      m.corpo.rotation.x = lado * 1.35 * k;
+      m.corpo.position.set(0, 3 * k, 0);
+      m.ombros[0].rotation.set(lado * 0.3, 0, Math.PI * 0.95);
+      m.ombros[1].rotation.set(lado * 0.3, 0, Math.PI * 0.95);
+      m.cotovelos[0].rotation.z = m.cotovelos[1].rotation.z = 0;
+    } else if (pose === 'festa') {
+      const salto = Math.abs(Math.sin(tempo.value * 8 + m.fase));
+      m.corpo.rotation.z = 0;
+      m.corpo.position.set(0, salto * 4, 0);
+      m.ancas[0].rotation.z = m.ancas[1].rotation.z = 0;
+      m.joelhos[0].rotation.z = m.joelhos[1].rotation.z = -salto * 0.6;
+      m.ombros[0].rotation.set(0.35, 0, Math.PI * 0.92);
+      m.ombros[1].rotation.set(-0.35, 0, Math.PI * 0.92);
+      m.cotovelos[0].rotation.z = m.cotovelos[1].rotation.z = 0.1;
+    } else if (pose === 'chuto') {
+      m.ancas[1].rotation.z = 1.25;
+      m.joelhos[1].rotation.z = -0.1;
+      m.ancas[0].rotation.z = -0.3;
+      m.ombros[0].rotation.z = 0.8; m.ombros[1].rotation.z = -0.6;
+    } else if (pose === 'braco') {
+      // Árbitro a mostrar o cartão / fiscal com a bandeira no ar
+      m.ombros[1].rotation.set(0, 0, Math.PI * 0.97);
+      m.cotovelos[1].rotation.z = 0;
+    }
   }
 
   const modelos = new Map();
 
-  function atualizarJogadores(dt) {
-    for (const [p, m] of modelos) {
-      if (!players.includes(p)) { scene.remove(m.raiz); modelos.delete(p); }
-    }
-    for (const p of players) {
+  function atualizarBonecos(v, dt) {
+    const vivos = new Set();
+    for (const d of v.jogadores) {
+      const p = d.ref || d;
+      vivos.add(p);
       let m = modelos.get(p);
-      if (!m) { m = criarModelo(p); modelos.set(p, m); }
-      const vel = Math.hypot(p.vx, p.vy);
-      m.fase += vel * dt * 0.11;
-      const amp = Math.min(1, vel / 140) * 0.9;
-      const s = Math.sin(m.fase);
-      m.raiz.position.set(X(p.x), 0, Z(p.y));
-      m.raiz.rotation.y = -p.facing;
-
-      const festa = (state === 'golo' || state === 'fim') && p.team === lastScorer;
-      if (p.slide > 0 || p.chao > 0) {
-        // Carrinho: deitado para trás, pernas para a frente
-        m.corpo.rotation.z = 1.15;
-        m.corpo.position.set(-3, 3, 0);
-        m.pernas[0].rotation.z = m.pernas[1].rotation.z = 0.25;
-        m.bracos[0].rotation.z = m.bracos[1].rotation.z = -0.6;
-      } else if (festa) {
-        // Festejo: saltos com os braços no ar
-        m.corpo.rotation.z = 0;
-        const salto = Math.abs(Math.sin(tempo.value * 8 + p.num));
-        m.corpo.position.set(0, salto * 4, 0);
-        m.pernas[0].rotation.z = m.pernas[1].rotation.z = 0;
-        m.bracos[0].rotation.z = m.bracos[1].rotation.z = Math.PI * 0.9;
-        m.bracos[0].rotation.x = 0.4; m.bracos[1].rotation.x = -0.4;
-      } else {
-        m.corpo.rotation.z = 0;
-        m.corpo.position.set(0, Math.abs(s) * amp * 0.9, 0);
-        m.bracos[0].rotation.x = m.bracos[1].rotation.x = 0;
-        m.pernas[0].rotation.z = s * amp;
-        m.pernas[1].rotation.z = -s * amp;
-        m.bracos[0].rotation.z = -s * amp * 0.8;
-        m.bracos[1].rotation.z = s * amp * 0.8;
-        // Acabou de chutar: perna direita esticada para a frente
-        if (p.cooldown > 0.12) m.pernas[1].rotation.z = 1.1;
-      }
+      if (!m) { m = criarModeloJogador(p); modelos.set(p, m); }
+      let pose = null;
+      if (d.slide > 0 || d.chao > 0) pose = 'carrinho';
+      else if (d.mergulho > 0) pose = 'mergulho';
+      else if (!v.replay && (state === 'golo' || state === 'fim') && p.team === lastScorer) pose = 'festa';
+      else if (d.cooldown > 0.12) pose = 'chuto';
+      animarBoneco(m, d, dt, pose);
+    }
+    for (const d of v.arbitros) {
+      const a = d.ref || d;
+      vivos.add(a);
+      let m = modelos.get(a);
+      if (!m) { m = criarModeloArbitro(a); modelos.set(a, m); }
+      let pose = null;
+      if (a.tipo === 'arbitro' && d.cartaoT > 0 && d.cartao) {
+        pose = 'braco';
+        m.cartao.visible = true;
+        m.cartao.material = matCartao[d.cartao];
+      } else if (m.cartao) m.cartao.visible = false;
+      if (a.tipo === 'fiscal' && d.bandeira > 0) pose = 'braco';
+      animarBoneco(m, d, dt, pose);
+    }
+    for (const [k, m] of modelos) {
+      if (!vivos.has(k)) { scene.remove(m.raiz); modelos.delete(k); }
     }
   }
 
@@ -507,19 +605,87 @@ const Render = (() => {
   const eixo = new THREE.Vector3();
   const rodar = new THREE.Quaternion();
 
-  function atualizarBola(dt) {
-    bola.position.set(X(ball.x), ball.z + RB, Z(ball.y));
-    const v = Math.hypot(ball.vx, ball.vy);
+  function atualizarBola(b, dt) {
+    bola.position.set(X(b.x), b.z + RB, Z(b.y));
+    const v = Math.hypot(b.vx, b.vy);
     if (v > 1) {
-      eixo.set(ball.vy, 0, -ball.vx).normalize();
+      eixo.set(b.vy, 0, -b.vx).normalize();
       rodar.setFromAxisAngle(eixo, v * dt / RB);
       bola.quaternion.premultiply(rodar);
     }
   }
 
-  // ---------- Câmara de TV ----------
+  // ---------- Rede a abanar quando entra a bola ----------
+  let estadoAntes = state;
+  const abanao = { lado: -1, y: 0, z: 0, t: 99 };
+  function atualizarRedes(b, dt) {
+    if (state === 'golo' && estadoAntes !== 'golo') {
+      abanao.lado = b.x < W / 2 ? 0 : 1;
+      abanao.z = abanao.lado === 0 ? Z(b.y) : -Z(b.y);
+      abanao.y = Math.max(4, b.z);
+      abanao.t = 0;
+    }
+    estadoAntes = state;
+    abanao.t += dt;
+    for (let lado = 0; lado < 2; lado++) {
+      const r = redesFundo[lado];
+      const pos = r.geo.attributes.position;
+      const ativo = lado === abanao.lado && abanao.t < 3;
+      const amp = ativo ? 9 * Math.exp(-abanao.t * 1.6) * (0.6 + 0.4 * Math.cos(abanao.t * 14)) : 0;
+      for (let i = 0; i < pos.count; i++) {
+        const y = r.base[i * 3 + 1], z = r.base[i * 3 + 2];
+        const w = amp ? Math.exp(-((y - abanao.y) ** 2 + (z - abanao.z) ** 2) / (2 * 16 * 16)) : 0;
+        pos.setX(i, r.base[i * 3] - amp * w);
+      }
+      pos.needsUpdate = true;
+    }
+  }
+
+  // ---------- Ecrã gigante com o resultado ----------
+  const ecraCanvas = document.createElement('canvas');
+  ecraCanvas.width = 512; ecraCanvas.height = 256;
+  const ecraTex = new THREE.CanvasTexture(ecraCanvas);
+  ecraTex.colorSpace = THREE.SRGBColorSpace;
+  const ecra = new THREE.Group();
+  const moldura = new THREE.Mesh(new THREE.BoxGeometry(124, 66, 4), matDe('#15181f'));
+  const imagem = new THREE.Mesh(new THREE.PlaneGeometry(116, 58), new THREE.MeshBasicMaterial({ map: ecraTex }));
+  imagem.position.z = 2.1;
+  const pilar = new THREE.Mesh(new THREE.BoxGeometry(6, 140, 6), matBetao);
+  pilar.position.y = -100;
+  ecra.add(moldura, imagem, pilar);
+  ecra.position.set(X(0) - 200, 175, Z(0) - 190);
+  ecra.lookAt(0, 60, 0);
+  scene.add(ecra);
+  let ecraTexto = '';
+  function atualizarEcra() {
+    const golo = state === 'golo' && Math.floor(tempo.value * 3) % 2 === 0;
+    const txt = `${score[0]}-${score[1]}-${golo}-${state === 'replay'}`;
+    if (txt === ecraTexto) return;
+    ecraTexto = txt;
+    const g = ecraCanvas.getContext('2d');
+    g.fillStyle = '#05070d'; g.fillRect(0, 0, 512, 256);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (golo) {
+      g.fillStyle = '#ffd60a'; g.font = '900 120px sans-serif';
+      g.fillText('GOLO!', 256, 135);
+    } else {
+      g.fillStyle = EQUIPAS[0].camisola; g.fillRect(20, 60, 14, 120);
+      g.fillStyle = EQUIPAS[1].camisola; g.fillRect(478, 60, 14, 120);
+      g.fillStyle = '#ffffff'; g.font = '900 64px sans-serif';
+      g.fillText(EQUIPAS[0].curto, 110, 120);
+      g.fillText(EQUIPAS[1].curto, 402, 120);
+      g.font = '900 96px sans-serif';
+      g.fillText(`${score[0]}-${score[1]}`, 256, 124);
+      g.font = '700 26px sans-serif'; g.fillStyle = '#9fe0a6';
+      g.fillText(state === 'replay' ? 'REPETIÇÃO' : 'FUTEBOL 26', 256, 215);
+    }
+    ecraTex.needsUpdate = true;
+  }
+
+  // ---------- Câmaras ----------
   const cam = { x: 0, z: 0, fov: 26 };
-  function atualizarCamara(dt) {
+  const olhar = new THREE.Vector3();
+  function atualizarCamara(v, dt) {
     if (state === 'titulo' || !ball) {
       const t = tempo.value * 0.06;
       camera.position.set(Math.cos(t) * 820, 300, Math.sin(t) * 620);
@@ -527,13 +693,26 @@ const Render = (() => {
       if (camera.fov !== 40) { camera.fov = 40; camera.updateProjectionMatrix(); }
       return;
     }
+    const b = v.bola;
+    if (v.replay) {
+      // Repetição: câmara atrás da baliza onde entrou o golo, a seguir a bola
+      const lado = lastScorer === 0 ? 1 : -1;
+      // Fica entre a baliza e a bancada, um pouco acima da trave
+      camera.position.set(lado * (W / 2 + 72), 92, 45 * lado);
+      olhar.lerp(new THREE.Vector3(X(b.x), b.z + 8, Z(b.y)), Math.min(1, dt * 6));
+      camera.lookAt(olhar);
+      const d = camera.position.distanceTo(olhar);
+      camera.fov = clamp(2 * Math.atan(120 / d) * 180 / Math.PI, 9, 40);
+      camera.updateProjectionMatrix();
+      return;
+    }
     const k = Math.min(1, dt * 2.5);
-    let tx = clamp(X(ball.x), -W / 2 + 190, W / 2 - 190);
-    let tz = Z(ball.y) * 0.55;
+    // A câmara de TV vai um bocadinho à frente da jogada
+    let tx = clamp(X(b.x) + b.vx * 0.25, -W / 2 + 190, W / 2 - 190);
+    let tz = Z(b.y) * 0.55;
     let fov = 28;
     if (state === 'golo' || state === 'fim') {
-      // Depois do golo a câmara aproxima-se da baliza
-      tx = X(ball.x) * 0.9; tz = Z(ball.y) * 0.6; fov = 19;
+      tx = X(b.x) * 0.9; tz = Z(b.y) * 0.6; fov = 19;
     }
     cam.x += (tx - cam.x) * k;
     cam.z += (tz - cam.z) * k;
@@ -541,7 +720,8 @@ const Render = (() => {
     camera.fov = cam.fov;
     camera.updateProjectionMatrix();
     camera.position.set(cam.x * 0.8, 250, 600);
-    camera.lookAt(cam.x, 0, cam.z + 20);
+    olhar.set(cam.x, 0, cam.z + 20);
+    camera.lookAt(olhar);
   }
 
   // ---------- Ecrã ----------
@@ -566,27 +746,31 @@ const Render = (() => {
 
   function desenhar(dt) {
     tempo.value += dt;
+    const emJogo = state !== 'titulo' && ball;
+    const v = emJogo ? vista() : null;
     let alvo = 0.08;
     if (state === 'golo' || state === 'fim') alvo = 1;
+    else if (state === 'replay') alvo = 0.6;
     else if (ball && (ball.x < 170 || ball.x > W - 170)) alvo = 0.3;
     excitacao.value += (alvo - excitacao.value) * Math.min(1, dt * 3);
     for (const t of placasTex) t.offset.x += dt * 0.03;
+    atualizarEcra();
 
-    const emJogo = state !== 'titulo' && ball;
     bola.visible = !!emJogo;
     if (emJogo) {
-      atualizarJogadores(dt);
-      atualizarBola(dt);
+      atualizarBonecos(v, dt);
+      atualizarBola(v.bola, dt);
+      atualizarRedes(v.bola, dt);
     } else {
       for (const [, m] of modelos) scene.remove(m.raiz);
       modelos.clear();
     }
     marcadores.forEach((g, t) => {
       const p = human[t];
-      g.visible = !!(emJogo && p && state !== 'golo' && state !== 'fim');
+      g.visible = !!(emJogo && p && !v.replay && state !== 'golo' && state !== 'fim');
       if (g.visible) {
         g.position.set(X(p.x), 0, Z(p.y));
-        g.userData.seta.position.y = 30 + Math.sin(tempo.value * 6) * 1.5;
+        g.userData.seta.position.y = 32 + Math.sin(tempo.value * 6) * 1.5;
       }
     });
     const sp = state === 'parada' && setPiece && setPiece.taker;
@@ -595,7 +779,7 @@ const Render = (() => {
       setaMira.position.set(X(ball.x), 0, Z(ball.y));
       setaMira.rotation.y = -setPiece.taker.facing;
     }
-    atualizarCamara(dt);
+    atualizarCamara(v, dt);
     renderer.render(scene, camera);
   }
 

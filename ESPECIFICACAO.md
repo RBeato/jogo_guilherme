@@ -24,6 +24,8 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 | Botão 2: com bola **rematar** (segurar = força) · sem bola **carrinho** | G | L |
 
 - Correr é automático (não há tecla de sprint).
+- O botão 2 só faz carrinho quando é o **adversário** que tem a bola. Com a bola solta ou com
+  um colega, carrega o remate — dá para **rematar de primeira** quando a bola chega.
 - O **guarda-redes é sempre controlado pelo computador**.
 - Fintas: ainda por decidir como fazer sem acrescentar teclas.
 
@@ -35,7 +37,13 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - Jogadores 3D simples (sem cara), com camisola, número nas costas, calções e meias.
 - **No fundo do ecrã**: **nome do jogador em destaque** + **emblema dourado do PlayStyle**
   (J1 à esquerda, J2 à direita).
-- Sons: público, apito, chuto, grito de golo.
+- Sons: público, palmas ritmadas, "uuuh" quando a bola passa perto, apito, chuto, grito de golo.
+- Árbitro (mostra os cartões) e dois fiscais de linha (levantam a bandeira quando a bola sai).
+- Depois de cada golo: festejo e **repetição em câmara lenta** com a câmara atrás da baliza
+  (ESPAÇO para saltar). A rede abana quando a bola entra.
+- O guarda-redes atira-se para o lado nos remates.
+- Ecrã gigante no estádio com o resultado.
+- O jogador vira-se aos poucos e vai dando toques na bola quando corre com ela.
 
 ## 4. Equipas
 
