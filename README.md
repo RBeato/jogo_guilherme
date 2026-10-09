@@ -1,7 +1,7 @@
 # Futebol 26
 
 Jogo de futebol 3D para 2 jogadores no mesmo teclado, inspirado no FC 26.
-Portugal contra França, câmara de TV, estádio com adeptos.
+18 equipas, 7 estádios, câmara de TV, estádio com adeptos.
 
 ## Como jogar
 
@@ -9,13 +9,13 @@ Portugal contra França, câmara de TV, estádio com adeptos.
 2. Abre o ficheiro `index.html` no Chrome ou Edge (duplo clique). Não precisa de internet.
 3. Carrega **ESPAÇO** para começar.
 
-| Ação | J1 (Portugal) | J2 (França) |
+| Ação | J1 | J2 |
 |------|---------------|-------------|
 | Andar | W A S D | Setas |
 | Com bola: passar · Sem bola: mudar de jogador | F | K |
 | Com bola: rematar (segurar = força) · Sem bola: carrinho | G | L |
 
-No ecrã inicial, as setas ← → escolhem o estádio. Durante o jogo, **N** liga/desliga o narrador
+No ecrã inicial: **W/S** muda a equipa do J1, **↑/↓** a equipa do J2, **← →** o estádio. Durante o jogo, **N** liga/desliga o narrador
 e **ESPAÇO** salta a repetição do golo.
 
 Nas bolas paradas quem marca não anda: usa as teclas de andar para apontar
@@ -28,6 +28,7 @@ Nas bolas paradas quem marca não anda: usa as teclas de andar para apontar
 - `hud.js` — placar, painéis dos jogadores e textos
 - `audio.js` — sons
 - `narrador.js` — narrador (voz do computador)
+- `equipas.js` — equipas, jogadores, classificações e PlayStyles
 - `lib/three.min.js` — biblioteca three.js (r160, licença MIT em `lib/three-LICENSE`)
 
 Ver [ESPECIFICACAO.md](ESPECIFICACAO.md) para tudo o que o jogo vai ter.

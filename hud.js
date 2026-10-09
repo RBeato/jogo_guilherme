@@ -321,7 +321,18 @@ const Hud = (() => {
     const w = 360 * s, h = 210 * s;
     caixa(x, y, w, h, 'rgba(8,12,28,0.85)', 12);
     ctx.fillStyle = COR_J[t]; ctx.fillRect(x, y, w, 6 * s);
-    texto(`JOGADOR ${t + 1} · ${EQUIPAS[t].nome}`, x + 20 * s, y + 36 * s, 18, COR_J[t], 'left', '900');
+    // Equipa escolhida (W/S para o J1, ↑/↓ para o J2)
+    const eq = EQUIPAS[t];
+    ctx.fillStyle = eq.camisola;
+    ctx.fillRect(x + 20 * s, y + 20 * s, 14 * s, 20 * s);
+    ctx.fillStyle = eq.calcoes;
+    ctx.fillRect(x + 20 * s, y + 34 * s, 14 * s, 6 * s);
+    ctx.font = `900 ${18 * s}px "Segoe UI", system-ui, sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = COR_J[t];
+    ctx.fillText(`J${t + 1} · ${eq.nome}`, x + 42 * s, y + 36 * s, w - 150 * s);
+    texto(t === 0 ? '▲ W  ▼ S' : '▲ ↑  ▼ ↓', x + w - 18 * s, y + 30 * s, 12, '#ffd60a', 'right', '900');
+    texto(eq.alternativo ? `${eq.grupo} · equip. alternativo` : eq.grupo, x + w - 18 * s, y + 44 * s, 9, '#9aa6bf', 'right', '600');
     const k = TECLAS[t];
     const nome = c => c.replace('Key', '').replace('Arrow', '').replace('Up', '↑').replace('Down', '↓').replace('Left', '←').replace('Right', '→');
     let cx = x + 20 * s;

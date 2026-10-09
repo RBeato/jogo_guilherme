@@ -411,8 +411,10 @@ const Render = (() => {
       g.rotation.y = rotY;
       estadio.add(g);
     }
-    const vermelhos = ['#d62828', '#d62828', '#d62828', '#ffffff', '#9d0208'];
-    const azuis = ['#1d4ed8', '#1d4ed8', '#1d4ed8', '#ffffff', '#0b2a6f'];
+    // Adeptos vestidos com as cores das duas equipas
+    const adeptos = e => [e.camisola, e.camisola, e.camisola, e.calcoes, '#ffffff'];
+    const vermelhos = adeptos(EQUIPAS[0]);
+    const azuis = adeptos(EQUIPAS[1]);
     const mistos = [...vermelhos, ...azuis, '#ffd60a', '#222222'];
     const DB = 50;   // distância das bancadas às linhas
     // As bancadas compridas vão até aos cantos, para o estádio ficar fechado
@@ -431,18 +433,34 @@ const Render = (() => {
     }
 
     // ---------- Bandeiras a esvoaçar na bancada ----------
-    const texPOR = canvasTex(120, 80, (g, w, h) => {
-      g.fillStyle = '#046a38'; g.fillRect(0, 0, w * 0.4, h);
-      g.fillStyle = '#da291c'; g.fillRect(w * 0.4, 0, w * 0.6, h);
-      g.fillStyle = '#ffe900'; g.beginPath(); g.arc(w * 0.4, h / 2, h * 0.24, 0, Math.PI * 2); g.fill();
-      g.fillStyle = '#da291c'; g.fillRect(w * 0.4 - 8, h / 2 - 10, 16, 18);
-      g.fillStyle = '#ffffff'; g.fillRect(w * 0.4 - 5, h / 2 - 6, 10, 11);
-    });
-    const texFRA = canvasTex(120, 80, (g, w, h) => {
-      g.fillStyle = '#002654'; g.fillRect(0, 0, w / 3, h);
-      g.fillStyle = '#ffffff'; g.fillRect(w / 3, 0, w / 3, h);
-      g.fillStyle = '#ce1126'; g.fillRect(2 * w / 3, 0, w / 3, h);
-    });
+    // Bandeira de cada equipa (país ou cores do clube)
+    function texBandeira(eq) {
+      const b = eq.bandeira || { tipo: 'v', cores: [eq.camisola, eq.calcoes] };
+      return canvasTex(120, 80, (g, w, h) => {
+        if (b.tipo === 'pt') {
+          g.fillStyle = '#046a38'; g.fillRect(0, 0, w * 0.4, h);
+          g.fillStyle = '#da291c'; g.fillRect(w * 0.4, 0, w * 0.6, h);
+          g.fillStyle = '#ffe900'; g.beginPath(); g.arc(w * 0.4, h / 2, h * 0.24, 0, Math.PI * 2); g.fill();
+          g.fillStyle = '#da291c'; g.fillRect(w * 0.4 - 8, h / 2 - 10, 16, 18);
+          g.fillStyle = '#ffffff'; g.fillRect(w * 0.4 - 5, h / 2 - 6, 10, 11);
+        } else if (b.tipo === 'br') {
+          g.fillStyle = '#009c3b'; g.fillRect(0, 0, w, h);
+          g.fillStyle = '#ffdf00'; g.beginPath();
+          g.moveTo(w / 2, 8); g.lineTo(w - 10, h / 2); g.lineTo(w / 2, h - 8); g.lineTo(10, h / 2); g.fill();
+          g.fillStyle = '#002776'; g.beginPath(); g.arc(w / 2, h / 2, h * 0.22, 0, Math.PI * 2); g.fill();
+        } else if (b.tipo === 'cruz') {
+          g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
+          g.fillStyle = '#ce1124'; g.fillRect(w / 2 - 8, 0, 16, h); g.fillRect(0, h / 2 - 8, w, 16);
+        } else if (b.tipo === 'h') {
+          b.cores.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, i * h / b.cores.length, w, h / b.cores.length + 1); });
+          if (b.sol) { g.fillStyle = '#f6b40e'; g.beginPath(); g.arc(w / 2, h / 2, 8, 0, Math.PI * 2); g.fill(); }
+        } else {
+          b.cores.forEach((c, i) => { g.fillStyle = c; g.fillRect(i * w / b.cores.length, 0, w / b.cores.length + 1, h); });
+        }
+      });
+    }
+    const texPOR = texBandeira(EQUIPAS[0]);
+    const texFRA = texBandeira(EQUIPAS[1]);
     function matBandeira(tex) {
       const m = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.9 });
       m.onBeforeCompile = sh => {
@@ -510,6 +528,7 @@ const Render = (() => {
     if (estadioAtual) {
       scene.remove(estadioAtual);
       estadioAtual.traverse(o => {
+        if (o.userData.partilhado) return;   // geometrias/materiais dos bonecos são partilhados
         if (o.geometry) o.geometry.dispose();
         if (o.material) [].concat(o.material).forEach(m => { if (m.map && m.map !== texPlacas) m.map.dispose(); m.dispose(); });
       });
@@ -517,6 +536,8 @@ const Render = (() => {
     const tema = ESTADIOS[estadioIdx];
     aplicarCeu(tema);
     estadioAtual = construirEstadio(tema);
+    bancoSuplentes(estadioAtual, 0, -110);
+    bancoSuplentes(estadioAtual, 1, 110);
     ecraTexto = '';
   }
 
@@ -589,6 +610,7 @@ const Render = (() => {
     const mesh = (g, cor, x = 0, y = 0, z = 0) => {
       const m = new THREE.Mesh(g, typeof cor === 'string' ? matDe(cor) : cor);
       m.position.set(x, y, z);
+      m.userData.partilhado = true;
       return m;
     };
     const calcao = mesh(geo.calcao, kit.calcoes, 0, 12.4, 0);
@@ -1122,7 +1144,7 @@ const Render = (() => {
   }
 
   // ---------- Bancos de suplentes com treinadores ----------
-  function bancoSuplentes(team, xCentro) {
+  function bancoSuplentes(pai, team, xCentro) {
     const eq = EQUIPAS[team];
     const zBanco = Z(H) + 22;
     const vidro = new THREE.MeshStandardMaterial({ color: '#cfe8ff', transparent: true, opacity: 0.3, roughness: 0.1 });
@@ -1136,7 +1158,7 @@ const Render = (() => {
     banco.position.set(0, 2.5, 2.5);
     g.add(fundo, teto, banco);
     g.position.set(xCentro, 0, zBanco);
-    scene.add(g);
+    pai.add(g);
     // Suplentes sentados
     [12, 14, 23, 18].forEach((num, i) => {
       const m = criarBoneco({
@@ -1144,15 +1166,15 @@ const Render = (() => {
         cabelo: CABELOS[(num + team) % CABELOS.length], estilo: ['curto', 'rapado', 'volume', 'curto'][i],
         numero: num, corNumero: eq.numero, gola: eq.gola,
       });
+      pai.add(m.raiz);
       animarBoneco(m, { x: xCentro - 21 + i * 14 + W / 2, y: H + 22 + 1.5, facing: -Math.PI / 2, vx: 0, vy: 0 }, 0, 'sentado');
     });
     // Treinador de pé à frente do banco, a olhar para o jogo
     const t = criarBoneco({ camisola: '#1d1f24', calcoes: '#1d1f24', meias: '#1d1f24', pele: '#e3b083', cabelo: '#555555',
       estilo: 'curto', barba: team === 1 });
+    pai.add(t.raiz);
     animarBoneco(t, { x: xCentro + W / 2 + 36, y: H + 12, facing: -Math.PI / 2, vx: 0, vy: 0 }, 0, null);
   }
-  bancoSuplentes(0, -110);
-  bancoSuplentes(1, 110);
 
   // Qualidade mais baixa para computadores lentos
   function baixarQualidade() {

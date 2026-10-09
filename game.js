@@ -42,24 +42,27 @@ addEventListener('keyup', e => {
 addEventListener('blur', () => down.clear());
 
 // ---------- Equipas ----------
-const EQUIPAS = [
-  { nome: 'PORTUGAL', curto: 'POR', camisola: '#c8102e', calcoes: '#00573f', numero: '#ffd60a', gola: '#ffd60a', gr: '#2b9348',
-    plantel: [
-      { nome: 'Diogo Costa', chamado: 'Diogo Costa', num: 22, ovr: 84, posicao: 'GR', at: { ref: 86 }, ps: 'Reflexos', pele: '#e8b98a', cabelo: '#2a1a0e', estilo: 'curto', barba: true },
-      { nome: 'Rúben Dias', chamado: 'Rúben Dias', num: 4, ovr: 88, posicao: 'DC', at: { rit: 63, rem: 39, pas: 66, dri: 68, def: 89, fis: 88 }, ps: 'Muralha', pele: '#d9a273', cabelo: '#1b1209', estilo: 'curto', barba: true },
-      { nome: 'Nuno Mendes', chamado: 'Nuno Mendes', num: 19, ovr: 86, posicao: 'DE', at: { rit: 91, rem: 65, pas: 77, dri: 84, def: 80, fis: 79 }, ps: 'Rápido', pele: '#6b4226', cabelo: '#0d0d0d', estilo: 'volume', barba: false },
-      { nome: 'Bruno Fernandes', chamado: 'Bruno Fernandes', num: 8, ovr: 87, posicao: 'MCO', at: { rit: 74, rem: 86, pas: 89, dri: 83, def: 69, fis: 77 }, ps: 'Passe Incisivo', pele: '#e3b083', cabelo: '#2a1a0e', estilo: 'curto', barba: true },
-      { nome: 'Cristiano Ronaldo', num: 7, ovr: 85, posicao: 'PL', at: { rit: 77, rem: 88, pas: 75, dri: 79, def: 34, fis: 77 }, ps: 'Remate Potente', pele: '#d9a273', cabelo: '#1b1209', estilo: 'topete', barba: false, botas: '#f5f5f5' },
-    ] },
-  { nome: 'FRANÇA', curto: 'FRA', camisola: '#1d3f8f', calcoes: '#ffffff', meias: '#c8102e', numero: '#ffffff', gola: '#ffffff', gr: '#c5e13a',
-    plantel: [
-      { nome: 'Mike Maignan', num: 16, ovr: 87, posicao: 'GR', at: { ref: 89 }, ps: 'Reflexos', pele: '#5a3620', cabelo: '#0d0d0d', estilo: 'rapado', barba: true },
-      { nome: 'William Saliba', num: 17, ovr: 87, posicao: 'DC', at: { rit: 81, rem: 40, pas: 70, dri: 73, def: 88, fis: 84 }, ps: 'Muralha', pele: '#4a2c1a', cabelo: '#0d0d0d', estilo: 'rapado', barba: false },
-      { nome: 'Theo Hernández', chamado: 'Theo', num: 22, ovr: 84, posicao: 'DE', at: { rit: 89, rem: 72, pas: 76, dri: 80, def: 77, fis: 82 }, ps: 'Carrinho', pele: '#e3b083', cabelo: '#1b1209', estilo: 'curto', barba: true },
-      { nome: 'Aurélien Tchouaméni', num: 8, ovr: 85, posicao: 'MDC', at: { rit: 72, rem: 73, pas: 80, dri: 78, def: 84, fis: 85 }, ps: 'Intercetor', pele: '#4a2c1a', cabelo: '#0d0d0d', estilo: 'volume', barba: false },
-      { nome: 'Kylian Mbappé', num: 10, ovr: 91, posicao: 'PL', at: { rit: 97, rem: 90, pas: 80, dri: 92, def: 36, fis: 78 }, ps: 'Remate Colocado', pele: '#6b4226', cabelo: '#0d0d0d', estilo: 'rapado', barba: false, botas: '#ff6b00' },
-    ] },
-];
+// As duas equipas em jogo (escolhidas no ecrã inicial; as listas estão em equipas.js)
+const escolhaEquipa = [0, 1];
+const EQUIPAS = [TODAS_EQUIPAS[0], TODAS_EQUIPAS[1]];
+
+// Se as camisolas forem parecidas, a segunda equipa veste o equipamento alternativo
+function corParecida(a, b) {
+  const n = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const [x, y] = [n(a), n(b)];
+  return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 150;
+}
+function vestirEquipas() {
+  const casa = TODAS_EQUIPAS[escolhaEquipa[0]];
+  const fora = TODAS_EQUIPAS[escolhaEquipa[1]];
+  EQUIPAS[0] = casa;
+  EQUIPAS[1] = corParecida(casa.camisola, fora.camisola) ? { ...fora, ...fora.alt, alternativo: true } : fora;
+}
+function mudarEquipa(t, d) {
+  escolhaEquipa[t] = (escolhaEquipa[t] + d + TODAS_EQUIPAS.length) % TODAS_EQUIPAS.length;
+  vestirEquipas();
+  Render.mudarEstadio(0);   // a bancada muda de cores e de bandeiras
+}
 
 // O que cada PlayStyle faz no jogo
 const PLAYSTYLES = {
@@ -897,9 +900,13 @@ function goal(team) {
 function update(dt) {
   if (pressed.has('KeyN')) Narrador.alternar();
   if (state === 'titulo') {
-    // Setas (ou A/D) para escolher o estádio
-    if (pressed.has('ArrowRight') || pressed.has('KeyD')) Render.mudarEstadio(1);
-    if (pressed.has('ArrowLeft') || pressed.has('KeyA')) Render.mudarEstadio(-1);
+    // Setas ← → escolhem o estádio; W/S a equipa do J1; ↑/↓ a equipa do J2
+    if (pressed.has('ArrowRight')) Render.mudarEstadio(1);
+    if (pressed.has('ArrowLeft')) Render.mudarEstadio(-1);
+    if (pressed.has('KeyW')) mudarEquipa(0, -1);
+    if (pressed.has('KeyS')) mudarEquipa(0, 1);
+    if (pressed.has('ArrowUp')) mudarEquipa(1, -1);
+    if (pressed.has('ArrowDown')) mudarEquipa(1, 1);
     if (pressed.has('Space')) newGame();
     return;
   }

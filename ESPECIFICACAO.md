@@ -60,8 +60,17 @@ Nomes reais e cores das camisolas (sem emblemas oficiais nem fotografias):
 - **Seleções** (Portugal, Brasil, França, Argentina, ...)
 - **Equipas inventadas** — o Guilherme escolhe nome e cores
 
-Os jogadores têm **nomes reais**. Cada jogador tem um PlayStyle.
-Por agora o jogo é sempre **Portugal vs França** (5 jogadores cada).
+Os jogadores têm o nome com **um "i" no fim do apelido** (ex.: Cristiano Ronaldoi), decisão do
+Guilherme — como nos jogos de futebol antigos sem licença. Cada jogador tem um PlayStyle.
+
+**18 equipas** (5 jogadores cada), escolhidas no ecrã inicial — J1 com **W/S**, J2 com **↑/↓**:
+- Seleções: Portugal, França, Brasil, Argentina, Espanha, Inglaterra, Alemanha
+- Clubes portugueses: Benfica, FC Porto, Sporting, SC Braga
+- Clubes europeus: Real Madrid, Barcelona, Manchester City, Bayern, Liverpool, Paris SG
+- Equipa inventada: Guilherme FC (com o Guilherme e o Romeu)
+
+Se as camisolas forem parecidas, a segunda equipa joga com o equipamento alternativo.
+Os plantéis mudam todas as épocas: alguns jogadores podem já ter mudado de clube.
 
 Cada jogador tem uma **carta dourada ao estilo do FC** com classificação, posição e atributos
 (RIT, REM, PAS, DRI, DEF, FIS; REF nos guarda-redes). Os atributos mudam mesmo o jogo:
@@ -88,13 +97,13 @@ Quando um PlayStyle entra em ação aparece o **emblema dourado por cima do joga
 
 | PlayStyle (no jogo) | O que faz |
 |---|---|
-| Remate Potente (Ronaldo) | Remate mais forte, mais rasteiro e mais certeiro mesmo com força máxima |
-| Remate Colocado (Mbappé) | Remate em arco que curva para o canto, muito difícil para o GR |
-| Passe Incisivo (Bruno Fernandes) | Passe em profundidade, para o espaço à frente do colega |
-| Rápido (Nuno Mendes) | Arranca mais depressa e corre mais |
-| Muralha (Rúben Dias, Saliba) | Ganha os duelos de ombro, difícil tirar-lhe a bola |
-| Carrinho (Theo) | Carrinhos chegam mais longe e quase não dão cartão |
-| Intercetor (Tchouaméni) | Lê os passes e corta-os |
+| Remate Potente (Cristiano Ronaldoi) | Remate mais forte, mais rasteiro e mais certeiro mesmo com força máxima |
+| Remate Colocado (Kylian Mbappéi) | Remate em arco que curva para o canto, muito difícil para o GR |
+| Passe Incisivo (Bruno Fernandesi) | Passe em profundidade, para o espaço à frente do colega |
+| Rápido (Nuno Mendesi) | Arranca mais depressa e corre mais |
+| Muralha (Rúben Diasi, William Salibai) | Ganha os duelos de ombro, difícil tirar-lhe a bola |
+| Carrinho (Theo Hernándezi) | Carrinhos chegam mais longe e quase não dão cartão |
+| Intercetor (Aurélien Tchouaménii) | Lê os passes e corta-os |
 | Reflexos (guarda-redes) | Mergulha mais longe e mais depressa |
 
 ### Lista original de ideias
