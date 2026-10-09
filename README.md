@@ -15,6 +15,9 @@ Portugal contra França, câmara de TV, estádio com adeptos.
 | Com bola: passar · Sem bola: mudar de jogador | F | K |
 | Com bola: rematar (segurar = força) · Sem bola: carrinho | G | L |
 
+No ecrã inicial, as setas ← → escolhem o estádio. Durante o jogo, **N** liga/desliga o narrador
+e **ESPAÇO** salta a repetição do golo.
+
 Nas bolas paradas quem marca não anda: usa as teclas de andar para apontar
 (aparece uma seta no relvado) e depois passa ou remata.
 
@@ -24,6 +27,7 @@ Nas bolas paradas quem marca não anda: usa as teclas de andar para apontar
 - `render3d.js` — estádio, jogadores e câmara em 3D
 - `hud.js` — placar, painéis dos jogadores e textos
 - `audio.js` — sons
+- `narrador.js` — narrador (voz do computador)
 - `lib/three.min.js` — biblioteca three.js (r160, licença MIT em `lib/three-LICENSE`)
 
 Ver [ESPECIFICACAO.md](ESPECIFICACAO.md) para tudo o que o jogo vai ter.

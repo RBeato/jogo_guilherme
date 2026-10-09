@@ -18,6 +18,7 @@ const Render = (() => {
   const X = x => x - W / 2;
   const Z = y => y - H / 2;
   const tempo = { value: 0 };
+  let sombrasBonecos = true;
   const excitacao = { value: 0 };
 
   function canvasTex(w, h, desenhar) {
@@ -30,18 +31,41 @@ const Render = (() => {
     return t;
   }
 
-  // ---------- Céu de noite ----------
-  scene.background = canvasTex(4, 256, (g, w, h) => {
+  // ---------- Estádios (inspirados nos verdadeiros; não são cópias exatas) ----------
+  const ESTADIOS = [
+    { nome: 'Estádio da Luz', cidade: 'Lisboa', assentos: ['#c8102e', '#a50d26'], telhado: '#eef1f5', filas: 18, filasTopo: 15,
+      telhadoTopos: true, dia: false },
+    { nome: 'Estádio do Dragão', cidade: 'Porto', assentos: ['#1c4fa0', '#163f82'], telhado: '#d9dee6', filas: 17, filasTopo: 15,
+      telhadoTopos: true, dia: false },
+    { nome: 'Estádio José Alvalade', cidade: 'Lisboa', assentos: ['#f2c500', '#0b8a4b', '#ffffff', '#1c4fa0', '#e4572e'],
+      telhado: '#c9ced6', filas: 17, filasTopo: 15, telhadoTopos: true, dia: false },
+    { nome: 'Santiago Bernabéu', cidade: 'Madrid', assentos: ['#e9e9ee', '#c9cad3'], telhado: '#b9bec8', filas: 24, filasTopo: 20,
+      telhadoTopos: true, dia: false, faixa: '#7fb7ff' },
+    { nome: 'Wembley', cidade: 'Londres', assentos: ['#c8102e', '#a50d26'], telhado: '#e6e9ee', filas: 20, filasTopo: 18,
+      telhadoTopos: true, dia: true, arco: true },
+    { nome: 'Allianz Arena', cidade: 'Munique', assentos: ['#8d939e', '#6e747f'], telhado: '#f2f2f2', filas: 19, filasTopo: 17,
+      telhadoTopos: true, dia: false, faixa: '#ff2a2a' },
+    { nome: 'Maracanã', cidade: 'Rio de Janeiro', assentos: ['#1c4fa0', '#f2c500', '#ffffff'], telhado: '#f4f4f4', filas: 18,
+      filasTopo: 18, telhadoTopos: true, dia: true },
+  ];
+  const ceuNoite = canvasTex(4, 256, (g, w, h) => {
     const grad = g.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, '#050a1c');
     grad.addColorStop(0.6, '#13224a');
     grad.addColorStop(1, '#2b3d6b');
     g.fillStyle = grad; g.fillRect(0, 0, w, h);
   });
-  scene.fog = new THREE.Fog('#1a2850', 1800, 4200);
+  const ceuDia = canvasTex(4, 256, (g, w, h) => {
+    const grad = g.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, '#3d7fd6');
+    grad.addColorStop(0.65, '#8fbdf0');
+    grad.addColorStop(1, '#dcebfb');
+    g.fillStyle = grad; g.fillRect(0, 0, w, h);
+  });
 
-  // ---------- Luzes dos holofotes ----------
-  scene.add(new THREE.HemisphereLight('#c8d8ff', '#2d5a2d', 1.1));
+  // ---------- Luzes (holofotes à noite, sol de dia) ----------
+  const hemi = new THREE.HemisphereLight('#c8d8ff', '#2d5a2d', 1.1);
+  scene.add(hemi);
   const luz = new THREE.DirectionalLight('#fff4e0', 2.6);
   luz.position.set(-260, 700, 380);
   luz.castShadow = true;
@@ -54,10 +78,28 @@ const Render = (() => {
   luz2.position.set(300, 500, -400);
   scene.add(luz2);
 
+  function aplicarCeu(tema) {
+    if (tema.dia) {
+      scene.background = ceuDia;
+      scene.fog = new THREE.Fog('#bcd6f2', 1800, 4500);
+      hemi.color.set('#dbe9ff'); hemi.intensity = 1.4;
+      luz.color.set('#fff1d6'); luz.intensity = 3.2;
+      luz.position.set(-420, 620, 260);     // sol mais baixo, sombras mais compridas
+      luz2.intensity = 0.6;
+    } else {
+      scene.background = ceuNoite;
+      scene.fog = new THREE.Fog('#1a2850', 1800, 4200);
+      hemi.color.set('#c8d8ff'); hemi.intensity = 1.1;
+      luz.color.set('#fff4e0'); luz.intensity = 2.6;
+      luz.position.set(-260, 700, 380);
+      luz2.intensity = 0.9;
+    }
+  }
+
   // ---------- Relva com riscas e linhas ----------
   const M = 90;   // relva à volta das linhas
-  const texRelva = canvasTex((W + 2 * M) * 2, (H + 2 * M) * 2, (g) => {
-    g.scale(2, 2);
+  const texRelva = canvasTex((W + 2 * M) * 2.5, (H + 2 * M) * 2.5, (g) => {
+    g.scale(2.5, 2.5);
     g.translate(M, M);
     const faixa = 50;
     for (let x = -M; x < W + M; x += faixa) {
@@ -69,6 +111,22 @@ const Render = (() => {
       g.fillStyle = Math.random() < 0.5 ? 'rgba(0,30,0,0.06)' : 'rgba(180,255,150,0.04)';
       g.fillRect(Math.random() * (W + 2 * M) - M, Math.random() * (H + 2 * M) - M, 1.2, 1.2);
     }
+    // Riscas mais finas no sentido contrário (corte em xadrez, como nos grandes estádios)
+    for (let y = 0; y < H; y += 64) {
+      g.fillStyle = Math.floor(y / 64) % 2 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.025)';
+      g.fillRect(-M, y, W + 2 * M, 64);
+    }
+    // Relva gasta à frente das balizas e no meio-campo
+    const gasto = (x, y, r, a) => {
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, `rgba(120,110,60,${a})`);
+      gr.addColorStop(1, 'rgba(120,110,60,0)');
+      g.fillStyle = gr;
+      g.beginPath(); g.ellipse(x, y, r, r * 0.8, 0, 0, Math.PI * 2); g.fill();
+    };
+    gasto(22, H / 2, 45, 0.35); gasto(W - 22, H / 2, 45, 0.35);
+    gasto(110, H / 2, 14, 0.4); gasto(W - 110, H / 2, 14, 0.4);
+    gasto(W / 2, H / 2, 30, 0.18);
     g.strokeStyle = 'rgba(255,255,255,0.92)';
     g.fillStyle = 'rgba(255,255,255,0.92)';
     g.lineWidth = 2;
@@ -215,160 +273,305 @@ const Render = (() => {
   placa(H + 2 * DP, X(0) - DP - 25, 0, Math.PI / 2);
   placa(H + 2 * DP, X(W) + DP + 25, 0, -Math.PI / 2);
 
-  // ---------- Bancadas com adeptos ----------
-  // Os adeptos saltam: o shader mexe cada boneco para cima e para baixo.
-  function materialAdepto(mat) {
-    mat.onBeforeCompile = sh => {
-      sh.uniforms.uTempo = tempo;
-      sh.uniforms.uExc = excitacao;
-      sh.vertexShader = 'uniform float uTempo;\nuniform float uExc;\n' + sh.vertexShader.replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
-        float seed = instanceMatrix[3].x * 0.731 + instanceMatrix[3].z * 1.37 + instanceMatrix[3].y * 0.31;
-        float salto = max(0.0, sin(uTempo * (6.0 + fract(seed) * 5.0) + seed * 6.2831));
-        float quer = step(0.55 - uExc * 0.6, fract(seed * 3.17));
-        transformed.y += salto * quer * (0.5 + uExc * 4.5);`);
-    };
-    return mat;
-  }
-  const matCorpo = materialAdepto(new THREE.MeshLambertMaterial({ color: '#ffffff' }));
-  const matCabeca = materialAdepto(new THREE.MeshLambertMaterial({ color: '#ffffff' }));
-  const matBetao = new THREE.MeshStandardMaterial({ color: '#5b6070', roughness: 0.9 });
-  const matBanco = new THREE.MeshStandardMaterial({ color: '#30343f', roughness: 0.8 });
-  const geoCorpo = new THREE.BoxGeometry(3.4, 5.6, 2.8);
-  const geoCabeca = new THREE.BoxGeometry(2.3, 2.3, 2.3);
+  // ---------- Estádio: bancadas, adeptos, bandeiras e torres ----------
+  // Construído por uma função para se poder trocar de estádio.
   const PELES = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'];
-
-  function bancada(comp, filas, px, pz, rotY, cores, telhado, paredeAlta = true) {
-    const g = new THREE.Group();
-    const prof = 9, sobe = 5.5, base = 8;
-    // Muro da frente
-    const muro = new THREE.Mesh(new THREE.BoxGeometry(comp, base, 3), matBetao);
-    muro.position.set(0, base / 2, 1.5);
-    g.add(muro);
-    for (let i = 0; i < filas; i++) {
-      const alt = base + i * sobe;
-      const deg = new THREE.Mesh(new THREE.BoxGeometry(comp, alt, prof), i % 2 ? matBetao : matBanco);
-      deg.position.set(0, alt / 2, -i * prof - prof / 2);
-      g.add(deg);
+  let bracosAdeptos = [];
+  let estadioAtual = null;
+  let estadioIdx = 0;
+  function construirEstadio(tema) {
+    const estadio = new THREE.Group();
+    // ---------- Bancadas com adeptos ----------
+    // Os adeptos saltam: o shader mexe cada boneco para cima e para baixo.
+    function materialAdepto(mat) {
+      mat.onBeforeCompile = sh => {
+        sh.uniforms.uTempo = tempo;
+        sh.uniforms.uExc = excitacao;
+        sh.vertexShader = 'uniform float uTempo;\nuniform float uExc;\n' + sh.vertexShader.replace(
+          '#include <begin_vertex>',
+          `#include <begin_vertex>
+          float seed = instanceMatrix[3].x * 0.731 + instanceMatrix[3].z * 1.37 + instanceMatrix[3].y * 0.31;
+          float salto = max(0.0, sin(uTempo * (6.0 + fract(seed) * 5.0) + seed * 6.2831));
+          float quer = step(0.55 - uExc * 0.6, fract(seed * 3.17));
+          transformed.y += salto * quer * (0.5 + uExc * 4.5);`);
+      };
+      return mat;
     }
-    // Parede de trás
-    const altFundo = base + filas * sobe + (paredeAlta ? 40 : 4);
-    const fundo = new THREE.Mesh(new THREE.BoxGeometry(comp, altFundo, 4), matBetao);
-    fundo.position.set(0, altFundo / 2, -filas * prof - 2);
-    g.add(fundo);
-    if (telhado) {
-      const altT = base + filas * sobe + 40;
-      const t = new THREE.Mesh(new THREE.BoxGeometry(comp + 20, 3, filas * prof * 0.75),
-        new THREE.MeshStandardMaterial({ color: '#2a2f3a', roughness: 0.7 }));
-      t.position.set(0, altT, -filas * prof * 0.62);
-      t.rotation.x = -0.08;
-      g.add(t);
-      // Fila de luzes debaixo do telhado
-      const luzes = new THREE.Mesh(new THREE.BoxGeometry(comp, 1.2, 1.2),
-        new THREE.MeshBasicMaterial({ color: '#fffbe6' }));
-      luzes.position.set(0, altT - 2.5, -filas * prof * 0.27);
-      g.add(luzes);
-    }
-
-    // Adeptos
-    const passo = 5.2;
-    const porFila = Math.floor(comp / passo);
-    const total = porFila * filas;
-    const corpos = new THREE.InstancedMesh(geoCorpo, matCorpo, total);
-    const cabecas = new THREE.InstancedMesh(geoCabeca, matCabeca, total);
-    const m = new THREE.Matrix4();
-    const cor = new THREE.Color();
-    let n = 0;
-    for (let i = 0; i < filas; i++) {
-      for (let j = 0; j < porFila; j++) {
-        if (Math.random() < 0.06) continue;   // lugares vazios
-        const x = -comp / 2 + passo / 2 + j * passo + (Math.random() - 0.5) * 1.2;
-        const y = base + i * sobe;
-        const z = -i * prof - prof / 2 + (Math.random() - 0.5) * 2;
-        m.makeTranslation(x, y + 2.8, z);
-        corpos.setMatrixAt(n, m);
-        cor.set(cores[Math.floor(Math.random() * cores.length)]);
-        corpos.setColorAt(n, cor);
-        m.makeTranslation(x, y + 6.8, z);
-        cabecas.setMatrixAt(n, m);
-        cor.set(PELES[Math.floor(Math.random() * PELES.length)]);
-        cabecas.setColorAt(n, cor);
-        n++;
+    const matCorpo = materialAdepto(new THREE.MeshLambertMaterial({ color: '#ffffff' }));
+    const matCabeca = materialAdepto(new THREE.MeshLambertMaterial({ color: '#ffffff' }));
+    const matBetao = new THREE.MeshStandardMaterial({ color: '#5b6070', roughness: 0.9 });
+    const matsAssento = tema.assentos.map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.75 }));
+    const matTelhado = new THREE.MeshStandardMaterial({ color: tema.telhado, roughness: 0.6 });
+    // Junta várias geometrias numa só (para desenhar milhares de adeptos de uma vez)
+    function juntar(geos) {
+      const pos = [], nor = [], idx = [];
+      let base = 0;
+      for (const g0 of geos) {
+        const g = g0.index ? g0 : g0;
+        const p = g.attributes.position, n = g.attributes.normal;
+        for (let i = 0; i < p.count; i++) { pos.push(p.getX(i), p.getY(i), p.getZ(i)); nor.push(n.getX(i), n.getY(i), n.getZ(i)); }
+        if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + base);
+        base += p.count;
       }
+      const r = new THREE.BufferGeometry();
+      r.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      r.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+      r.setIndex(idx);
+      return r;
     }
-    corpos.count = cabecas.count = n;
-    g.add(corpos, cabecas);
-    g.position.set(px, 0, pz);
-    g.rotation.y = rotY;
-    scene.add(g);
-  }
-  const vermelhos = ['#d62828', '#d62828', '#d62828', '#ffffff', '#9d0208'];
-  const azuis = ['#1d4ed8', '#1d4ed8', '#1d4ed8', '#ffffff', '#0b2a6f'];
-  const mistos = [...vermelhos, ...azuis, '#ffd60a', '#222222'];
-  const DB = 50;   // distância das bancadas às linhas
-  bancada(W + 2 * DB, 16, 0, Z(0) - DB, 0, mistos, true);
-  // Bancada do lado da câmara: mais baixa e sem telhado, para não tapar o campo
-  bancada(W + 2 * DB, 7, 0, Z(H) + DB, Math.PI, mistos, false, false);
-  bancada(H + 2 * DB, 14, X(0) - DB - 30, 0, Math.PI / 2, vermelhos, false);
-  bancada(H + 2 * DB, 14, X(W) + DB + 30, 0, -Math.PI / 2, azuis, false);
+    // Adepto: tronco arredondado + cabeça; braços no ar só aparecem nos golos.
+    // Todas as peças usam a mesma posição, para saltarem juntas.
+    const geoCorpo = new THREE.CapsuleGeometry(1.55, 2.4, 2, 6).translate(0, 3.0, 0);
+    geoCorpo.scale(1, 1, 0.8);
+    const geoCabeca = new THREE.SphereGeometry(1.15, 7, 5).translate(0, 6.6, 0);
+    const geoBracos = juntar([
+      new THREE.BoxGeometry(0.7, 3.6, 0.7).rotateX(0.25).translate(0, 8.4, 1.6),
+      new THREE.BoxGeometry(0.7, 3.6, 0.7).rotateX(-0.25).translate(0, 8.4, -1.6),
+    ]);
+    const matBracos = materialAdepto(new THREE.MeshLambertMaterial({ color: '#ffffff' }));
+    bracosAdeptos = [];
 
-  // ---------- Torres de iluminação ----------
-  const texBrilho = canvasTex(128, 128, (g, w, h) => {
-    const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
-    r.addColorStop(0, 'rgba(255,255,240,1)');
-    r.addColorStop(0.2, 'rgba(255,250,220,0.6)');
-    r.addColorStop(1, 'rgba(255,250,220,0)');
-    g.fillStyle = r; g.fillRect(0, 0, w, h);
-  });
-  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-    const x = sx * (W / 2 + 200), z = sz * (H / 2 + 230);
-    const torre = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 380, 8), matBetao);
-    torre.position.set(x, 190, z);
-    const painel = new THREE.Mesh(new THREE.BoxGeometry(50, 28, 4), new THREE.MeshBasicMaterial({ color: '#fffbe6' }));
-    painel.position.set(x, 390, z);
-    painel.lookAt(0, 0, 0);
-    const brilho = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: texBrilho, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
-    brilho.scale.set(260, 260, 1);
-    brilho.position.set(x, 390, z);
-    scene.add(torre, painel, brilho);
+    function bancada(comp, filas, px, pz, rotY, cores, telhado, paredeAlta = true) {
+      const g = new THREE.Group();
+      const prof = 9, sobe = 5.5, base = 8;
+      // Muro da frente
+      const muro = new THREE.Mesh(new THREE.BoxGeometry(comp, base, 3), matBetao);
+      muro.position.set(0, base / 2, 1.5);
+      g.add(muro);
+      for (let i = 0; i < filas; i++) {
+        const alt = base + i * sobe;
+        // Degraus com as cores das cadeiras do estádio (vêem-se nos lugares vazios)
+        const deg = new THREE.Mesh(new THREE.BoxGeometry(comp, alt, prof), matsAssento[i % matsAssento.length]);
+        deg.position.set(0, alt / 2, -i * prof - prof / 2);
+        g.add(deg);
+      }
+      // Parede de trás
+      const altFundo = base + filas * sobe + (paredeAlta ? 40 : 4);
+      const fundo = new THREE.Mesh(new THREE.BoxGeometry(comp, altFundo, 4), matBetao);
+      fundo.position.set(0, altFundo / 2, -filas * prof - 2);
+      g.add(fundo);
+      if (telhado) {
+        const altT = base + filas * sobe + 40;
+        const t = new THREE.Mesh(new THREE.BoxGeometry(comp + 20, 3, filas * prof * 0.75), matTelhado);
+        t.position.set(0, altT, -filas * prof * 0.62);
+        t.rotation.x = -0.08;
+        g.add(t);
+        // Fila de luzes debaixo do telhado
+        const luzes = new THREE.Mesh(new THREE.BoxGeometry(comp, 1.2, 1.2),
+          new THREE.MeshBasicMaterial({ color: '#fffbe6' }));
+        luzes.position.set(0, altT - 2.5, -filas * prof * 0.27);
+        g.add(luzes);
+        if (tema.faixa) {
+          // Faixa de luz à volta do estádio (Allianz Arena vermelha, Bernabéu azul)
+          const f = new THREE.Mesh(new THREE.BoxGeometry(comp + 20, 6, 1.5), new THREE.MeshBasicMaterial({ color: tema.faixa }));
+          f.position.set(0, altT - 8, -filas * prof - 4.5);
+          g.add(f);
+        }
+      }
+
+      // Adeptos
+      const passo = 5.2;
+      const porFila = Math.floor(comp / passo);
+      const total = porFila * filas;
+      const corpos = new THREE.InstancedMesh(geoCorpo, matCorpo, total);
+      const cabecas = new THREE.InstancedMesh(geoCabeca, matCabeca, total);
+      const bracos = new THREE.InstancedMesh(geoBracos, matBracos, total);
+      let nb = 0;
+      const m = new THREE.Matrix4();
+      const cor = new THREE.Color();
+      let n = 0;
+      for (let i = 0; i < filas; i++) {
+        for (let j = 0; j < porFila; j++) {
+          if (Math.random() < 0.06) continue;   // lugares vazios
+          const x = -comp / 2 + passo / 2 + j * passo + (Math.random() - 0.5) * 1.2;
+          const y = base + i * sobe;
+          const z = -i * prof - prof / 2 + (Math.random() - 0.5) * 2;
+          m.makeTranslation(x, y, z);
+          corpos.setMatrixAt(n, m);
+          cabecas.setMatrixAt(n, m);
+          const camisola = cores[Math.floor(Math.random() * cores.length)];
+          cor.set(camisola);
+          corpos.setColorAt(n, cor);
+          cor.set(PELES[Math.floor(Math.random() * PELES.length)]);
+          cabecas.setColorAt(n, cor);
+          if (Math.random() < 0.6) {
+            bracos.setMatrixAt(nb, m);
+            bracos.setColorAt(nb, cor);
+            nb++;
+          }
+          n++;
+        }
+      }
+      corpos.count = cabecas.count = n;
+      bracos.count = nb;
+      bracos.visible = false;
+      bracosAdeptos.push(bracos);
+      g.add(corpos, cabecas, bracos);
+      g.position.set(px, 0, pz);
+      g.rotation.y = rotY;
+      estadio.add(g);
+    }
+    const vermelhos = ['#d62828', '#d62828', '#d62828', '#ffffff', '#9d0208'];
+    const azuis = ['#1d4ed8', '#1d4ed8', '#1d4ed8', '#ffffff', '#0b2a6f'];
+    const mistos = [...vermelhos, ...azuis, '#ffd60a', '#222222'];
+    const DB = 50;   // distância das bancadas às linhas
+    // As bancadas compridas vão até aos cantos, para o estádio ficar fechado
+    bancada(W + 2 * DB + 330, tema.filas, 0, Z(0) - DB, 0, mistos, true);
+    // Bancada do lado da câmara: mais baixa e sem telhado, para não tapar o campo
+    bancada(W + 2 * DB + 330, 7, 0, Z(H) + DB, Math.PI, mistos, false, false);
+    bancada(H + 2 * DB, tema.filasTopo, X(0) - DB - 30, 0, Math.PI / 2, vermelhos, tema.telhadoTopos);
+    bancada(H + 2 * DB, tema.filasTopo, X(W) + DB + 30, 0, -Math.PI / 2, azuis, tema.telhadoTopos);
+    if (tema.arco) {
+      // O arco branco de Wembley, por cima do estádio
+      const arco = new THREE.Mesh(new THREE.TorusGeometry(640, 7, 8, 64, Math.PI), new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.4 }));
+      arco.position.set(0, 0, Z(0) - DB - 60);
+      arco.rotation.y = 0.12;
+      arco.rotation.x = -0.35;
+      estadio.add(arco);
+    }
+
+    // ---------- Bandeiras a esvoaçar na bancada ----------
+    const texPOR = canvasTex(120, 80, (g, w, h) => {
+      g.fillStyle = '#046a38'; g.fillRect(0, 0, w * 0.4, h);
+      g.fillStyle = '#da291c'; g.fillRect(w * 0.4, 0, w * 0.6, h);
+      g.fillStyle = '#ffe900'; g.beginPath(); g.arc(w * 0.4, h / 2, h * 0.24, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#da291c'; g.fillRect(w * 0.4 - 8, h / 2 - 10, 16, 18);
+      g.fillStyle = '#ffffff'; g.fillRect(w * 0.4 - 5, h / 2 - 6, 10, 11);
+    });
+    const texFRA = canvasTex(120, 80, (g, w, h) => {
+      g.fillStyle = '#002654'; g.fillRect(0, 0, w / 3, h);
+      g.fillStyle = '#ffffff'; g.fillRect(w / 3, 0, w / 3, h);
+      g.fillStyle = '#ce1126'; g.fillRect(2 * w / 3, 0, w / 3, h);
+    });
+    function matBandeira(tex) {
+      const m = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.9 });
+      m.onBeforeCompile = sh => {
+        sh.uniforms.uTempo = tempo;
+        sh.vertexShader = 'uniform float uTempo;\n' + sh.vertexShader.replace('#include <begin_vertex>',
+          `#include <begin_vertex>
+          float solto = (position.x + 13.0) / 26.0;
+          transformed.z += sin(position.x * 0.35 - uTempo * 5.0 + position.y * 0.2) * 2.2 * solto;
+          transformed.y += sin(position.x * 0.25 - uTempo * 4.0) * 0.6 * solto;`);
+      };
+      return m;
+    }
+    const geoBand = new THREE.PlaneGeometry(26, 17, 14, 6).translate(13, 0, 0);
+    const matPOR = matBandeira(texPOR), matFRA = matBandeira(texFRA);
+    const geoMastro = new THREE.CylinderGeometry(0.35, 0.35, 34, 5);
+    const matMastro = new THREE.MeshStandardMaterial({ color: '#cccccc' });
+    function bandeira(x, z, y, rot, portugal) {
+      const g = new THREE.Group();
+      const pau = new THREE.Mesh(geoMastro, matMastro);
+      pau.position.y = 17;
+      const b = new THREE.Mesh(geoBand, portugal ? matPOR : matFRA);
+      b.position.y = 25;
+      g.add(pau, b);
+      g.position.set(x, y, z);
+      g.rotation.y = rot;
+      estadio.add(g);
+    }
+    for (let i = 0; i < 9; i++) {
+      const x = -W / 2 + 60 + i * 115;
+      bandeira(x, Z(0) - DB - 40 - (i % 3) * 30, 20 + (i % 3) * 16, Math.random() * 0.6, i % 2 === 0);
+    }
+    for (let i = 0; i < 5; i++) {
+      bandeira(X(0) - DB - 70 - (i % 2) * 30, -H / 2 + 80 + i * 120, 24 + (i % 2) * 10, Math.PI / 2, true);
+      bandeira(X(W) + DB + 70 + (i % 2) * 30, -H / 2 + 80 + i * 120, 24 + (i % 2) * 10, -Math.PI / 2, false);
+    }
+
+    // ---------- Torres de iluminação ----------
+    const texBrilho = canvasTex(128, 128, (g, w, h) => {
+      const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      r.addColorStop(0, 'rgba(255,255,240,1)');
+      r.addColorStop(0.2, 'rgba(255,250,220,0.6)');
+      r.addColorStop(1, 'rgba(255,250,220,0)');
+      g.fillStyle = r; g.fillRect(0, 0, w, h);
+    });
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const x = sx * (W / 2 + 200), z = sz * (H / 2 + 230);
+      const torre = new THREE.Mesh(new THREE.CylinderGeometry(3, 5, 380, 8), matBetao);
+      torre.position.set(x, 190, z);
+      const painel = new THREE.Mesh(new THREE.BoxGeometry(50, 28, 4), new THREE.MeshBasicMaterial({ color: '#fffbe6' }));
+      painel.position.set(x, 390, z);
+      painel.lookAt(0, 0, 0);
+      const brilho = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: texBrilho, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+      brilho.scale.set(260, 260, 1);
+      brilho.position.set(x, 390, z);
+      brilho.visible = !tema.dia;
+      estadio.add(torre, painel, brilho);
+    }
+    scene.add(estadio);
+    return estadio;
+  }
+
+  function mudarEstadio(i) {
+    estadioIdx = (i + ESTADIOS.length) % ESTADIOS.length;
+    if (estadioAtual) {
+      scene.remove(estadioAtual);
+      estadioAtual.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) [].concat(o.material).forEach(m => { if (m.map && m.map !== texPlacas) m.map.dispose(); m.dispose(); });
+      });
+    }
+    const tema = ESTADIOS[estadioIdx];
+    aplicarCeu(tema);
+    estadioAtual = construirEstadio(tema);
+    ecraTexto = '';
   }
 
   // ---------- Jogadores e árbitros ----------
   // Bonecos com corpo arredondado, joelhos e cotovelos que dobram.
   const capsula = (r, l) => new THREE.CapsuleGeometry(r, l, 3, 10);
   const geo = {
-    tronco: capsula(3.1, 3.0),
-    calcao: new THREE.CylinderGeometry(3.2, 3.6, 3.6, 14),
-    pescoco: new THREE.CylinderGeometry(0.9, 1.05, 1.8, 8),
-    cabeca: new THREE.SphereGeometry(2.35, 16, 12),
-    cabelo: new THREE.SphereGeometry(2.5, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
-    nariz: new THREE.SphereGeometry(0.45, 6, 4),
-    coxa: capsula(1.35, 3.0),
-    canela: capsula(1.1, 3.0),
-    bota: capsula(0.95, 2.3),
-    braco: capsula(0.95, 2.3),
-    antebraco: capsula(0.8, 2.3),
-    mao: new THREE.SphereGeometry(0.95, 8, 6),
-    luva: new THREE.SphereGeometry(1.45, 8, 6),
-    numero: new THREE.PlaneGeometry(4.2, 4.2),
-    pau: new THREE.CylinderGeometry(0.22, 0.22, 7, 5),
+    peito: capsula(2.8, 1.8),
+    barriga: capsula(2.5, 1.4),
+    calcao: new THREE.CylinderGeometry(2.85, 3.25, 3.8, 14),
+    pescoco: new THREE.CylinderGeometry(0.75, 0.9, 1.8, 8),
+    cabeca: new THREE.SphereGeometry(1.85, 18, 14),
+    queixo: new THREE.SphereGeometry(1.3, 12, 8),
+    cabelo: new THREE.SphereGeometry(2.06, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.47),
+    rapado: new THREE.SphereGeometry(1.9, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.46),
+    volume: new THREE.SphereGeometry(2.25, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.52),
+    topete: new THREE.SphereGeometry(1.2, 10, 6),
+    barba: new THREE.SphereGeometry(1.95, 16, 8, Math.PI / 2, Math.PI, Math.PI * 0.52, Math.PI * 0.32),
+    nariz: new THREE.SphereGeometry(0.36, 6, 4),
+    olho: new THREE.SphereGeometry(0.36, 8, 6),
+    pupila: new THREE.SphereGeometry(0.19, 6, 4),
+    sobrancelha: new THREE.BoxGeometry(0.24, 0.22, 0.8),
+    boca: new THREE.BoxGeometry(0.2, 0.2, 0.85),
+    orelha: new THREE.SphereGeometry(0.44, 6, 4),
+    coxa: capsula(1.3, 3.9),
+    canela: capsula(1.0, 4.0),
+    bota: capsula(0.8, 2.0),
+    manga: capsula(0.95, 1.2),
+    braco: capsula(0.72, 2.6),
+    antebraco: capsula(0.66, 2.8),
+    mao: new THREE.SphereGeometry(0.75, 8, 6),
+    luva: new THREE.SphereGeometry(1.25, 8, 6),
+    numero: new THREE.PlaneGeometry(4.4, 4.4),
+    gola: new THREE.TorusGeometry(0.95, 0.24, 6, 14),
+    faixa: new THREE.CylinderGeometry(1.08, 1.08, 0.6, 10),
+    pau: new THREE.CylinderGeometry(0.2, 0.2, 7, 5),
     bandeira: new THREE.PlaneGeometry(3.6, 2.8),
-    cartao: new THREE.BoxGeometry(0.3, 3.2, 2.2),
+    cartao: new THREE.BoxGeometry(0.3, 3.0, 2.0),
   };
   const mat = {};
   const matDe = (cor) => mat[cor] || (mat[cor] = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.72 }));
   const texNum = {};
-  function matNumero(num, cor) {
-    const k = num + cor;
+  function matNumero(num, cor, nome) {
+    const k = num + cor + (nome || '');
     if (!texNum[k]) {
-      const t = canvasTex(64, 64, (g, w, h) => {
+      const t = canvasTex(128, 128, (g, w, h) => {
         g.clearRect(0, 0, w, h);
         g.fillStyle = cor;
-        g.font = 'bold 46px sans-serif';
         g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText(String(num), w / 2, h / 2 + 3);
+        if (nome) {
+          g.font = 'bold 19px sans-serif';
+          g.fillText(nome.toUpperCase(), w / 2, 16, w - 6);
+        }
+        g.font = 'bold 84px "Arial Black", sans-serif';
+        g.fillText(String(num), w / 2, nome ? 76 : 66);
       });
       texNum[k] = new THREE.MeshStandardMaterial({ map: t, transparent: true, roughness: 0.8, depthWrite: false });
     }
@@ -377,7 +580,8 @@ const Render = (() => {
   const CABELOS = ['#1b1209', '#3b2412', '#6b4423', '#c9a15b', '#0d0d0d'];
   const matCartao = { amarelo: new THREE.MeshBasicMaterial({ color: '#ffd60a' }), vermelho: new THREE.MeshBasicMaterial({ color: '#ef233c' }) };
 
-  // kit: { camisola, calcoes, meias, pele, cabelo, numero, corNumero, luvas }
+  // Boneco com proporções de pessoa (cerca de 25 unidades de altura, pernas ~ metade).
+  // kit: { camisola, calcoes, meias, pele, cabelo, estilo, barba, numero, corNumero, luvas }
   function criarBoneco(kit) {
     const raiz = new THREE.Group();
     const corpo = new THREE.Group();
@@ -387,29 +591,68 @@ const Render = (() => {
       m.position.set(x, y, z);
       return m;
     };
-    const calcao = mesh(geo.calcao, kit.calcoes, 0, 10.4, 0);
-    calcao.scale.set(0.78, 1, 1.05);
-    const tronco = mesh(geo.tronco, kit.camisola, 0, 15.2, 0);
-    tronco.scale.set(0.62, 1, 1.12);
-    corpo.add(calcao, tronco,
-      mesh(geo.pescoco, kit.pele, 0, 20.1, 0),
-      mesh(geo.cabeca, kit.pele, 0.1, 22.3, 0),
-      mesh(geo.cabelo, kit.cabelo, -0.25, 22.6, 0),
-      mesh(geo.nariz, kit.pele, 2.3, 22.1, 0));
+    const calcao = mesh(geo.calcao, kit.calcoes, 0, 12.4, 0);
+    calcao.scale.set(0.74, 1, 1.05);
+    const barriga = mesh(geo.barriga, kit.camisola, 0, 15.2, 0);
+    barriga.scale.set(0.66, 1, 1.0);
+    const peito = mesh(geo.peito, kit.camisola, 0, 17.9, 0);
+    peito.scale.set(0.64, 0.9, 1.2);              // peito mais largo do que a cintura
+    corpo.add(calcao, barriga, peito, mesh(geo.pescoco, kit.pele, 0, 21.4, 0));
+    const gola = mesh(geo.gola, kit.gola || kit.calcoes, 0, 20.75, 0);
+    gola.rotation.x = Math.PI / 2;
+    gola.scale.set(1, 1.15, 1);
+    corpo.add(gola);
     if (kit.numero !== undefined) {
-      const n = mesh(geo.numero, matNumero(kit.numero, kit.corNumero), -2.0, 15.6, 0);
+      // Costas: nome e número; frente: número pequeno
+      const n = mesh(geo.numero, matNumero(kit.numero, kit.corNumero, kit.nomeCostas), -1.86, 17.5, 0);
       n.rotation.y = -Math.PI / 2;
-      corpo.add(n);
+      const f = mesh(geo.numero, matNumero(kit.numero, kit.corNumero), 1.86, 18.6, -0.9);
+      f.scale.set(0.35, 0.35, 1);
+      f.rotation.y = Math.PI / 2;
+      corpo.add(n, f);
     }
+
+    // Cabeça (num grupo próprio, para poder olhar para a bola)
+    const cabeca = new THREE.Group();
+    cabeca.position.set(0.1, 23.2, 0);
+    const queixo = mesh(geo.queixo, kit.pele, 0.45, -0.75, 0);
+    queixo.scale.set(1, 0.9, 1.05);
+    cabeca.add(mesh(geo.cabeca, kit.pele), queixo,
+      mesh(geo.nariz, kit.pele, 1.85, -0.15, 0),
+      mesh(geo.boca, '#7a2e2e', 1.68, -0.85, 0));
+    for (const s of [-1, 1]) {
+      const olho = mesh(geo.olho, '#ffffff', 1.5, 0.35, s * 0.66);
+      olho.scale.set(0.55, 1, 1);
+      cabeca.add(olho,
+        mesh(geo.pupila, '#1a120b', 1.72, 0.35, s * 0.66),
+        mesh(geo.sobrancelha, kit.cabelo, 1.66, 0.85, s * 0.66),
+        mesh(geo.orelha, kit.pele, 0, 0.05, s * 1.82));
+    }
+    // Cabelo: a linha do cabelo fica acima da testa e desce atrás da cabeça
+    const estilo = kit.estilo || 'curto';
+    const cabelo = mesh(geo[estilo === 'topete' ? 'cabelo' : estilo], kit.cabelo);
+    cabelo.rotation.z = 0.36;
+    if (estilo === 'curto' || estilo === 'topete') cabelo.scale.set(1, 1.12, 1);   // cabelo com volume em cima
+    cabeca.add(cabelo);
+    if (estilo === 'topete') {
+      const t = mesh(geo.topete, kit.cabelo, 1.0, 1.65, 0);
+      t.scale.set(1.1, 0.7, 1.4);
+      cabeca.add(t);
+    }
+    if (kit.barba) cabeca.add(mesh(geo.barba, kit.cabelo));
+    corpo.add(cabeca);
+
     const ancas = [], joelhos = [], ombros = [], cotovelos = [];
     for (const s of [-1, 1]) {
       const anca = new THREE.Group();
-      anca.position.set(0, 10.0, s * 1.85);
-      anca.add(mesh(geo.coxa, kit.pele, 0, -2.4, 0));
+      anca.position.set(0, 12.6, s * 1.6);
+      anca.add(mesh(geo.coxa, kit.pele, 0, -3.0, 0));
       const joelho = new THREE.Group();
-      joelho.position.y = -4.8;
-      joelho.add(mesh(geo.canela, kit.meias, 0, -2.3, 0));
-      const bota = mesh(geo.bota, '#111111', 0.9, -4.6, 0);
+      joelho.position.y = -6.0;
+      joelho.add(mesh(geo.canela, kit.meias, 0, -3.0, 0));
+      const faixa = mesh(geo.faixa, kit.gola || kit.calcoes, 0, -0.9, 0);
+      joelho.add(faixa);
+      const bota = mesh(geo.bota, kit.botas || '#111111', 0.7, -5.95, 0);
       bota.rotation.z = Math.PI / 2;
       joelho.add(bota);
       anca.add(joelho);
@@ -417,19 +660,19 @@ const Render = (() => {
       ancas.push(anca); joelhos.push(joelho);
 
       const ombro = new THREE.Group();
-      ombro.position.set(0, 18.6, s * 4.0);
-      ombro.add(mesh(geo.braco, kit.camisola, 0, -1.5, 0));
+      ombro.position.set(0, 20.4, s * 3.5);
+      ombro.add(mesh(geo.manga, kit.camisola, 0, -1.0, 0), mesh(geo.braco, kit.pele, 0, -2.4, 0));
       const cotovelo = new THREE.Group();
-      cotovelo.position.y = -3.2;
-      cotovelo.add(mesh(geo.antebraco, kit.pele, 0, -1.5, 0));
-      cotovelo.add(kit.luvas ? mesh(geo.luva, kit.luvas, 0, -3.4, 0) : mesh(geo.mao, kit.pele, 0, -3.2, 0));
+      cotovelo.position.y = -4.4;
+      cotovelo.add(mesh(geo.antebraco, kit.pele, 0, -2.0, 0));
+      cotovelo.add(kit.luvas ? mesh(geo.luva, kit.luvas, 0, -4.4, 0) : mesh(geo.mao, kit.pele, 0, -4.2, 0));
       ombro.add(cotovelo);
       corpo.add(ombro);
       ombros.push(ombro); cotovelos.push(cotovelo);
     }
-    raiz.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    raiz.traverse(o => { if (o.isMesh) o.castShadow = sombrasBonecos; });
     scene.add(raiz);
-    return { raiz, corpo, ancas, joelhos, ombros, cotovelos, fase: Math.random() * 6 };
+    return { raiz, corpo, cabeca, ancas, joelhos, ombros, cotovelos, fase: Math.random() * 6 };
   }
 
   function criarModeloJogador(p) {
@@ -437,66 +680,102 @@ const Render = (() => {
     const camisola = p.gk ? eq.gr : eq.camisola;
     return criarBoneco({
       camisola, calcoes: p.gk ? '#222222' : eq.calcoes, meias: p.gk ? camisola : (eq.meias || camisola),
-      pele: PELES[(p.num * 7 + p.team * 3) % PELES.length],
-      cabelo: CABELOS[(p.num + p.team) % CABELOS.length],
+      pele: (p.aspeto && p.aspeto.pele) || PELES[(p.num * 7 + p.team * 3) % PELES.length],
+      cabelo: (p.aspeto && p.aspeto.cabelo) || CABELOS[(p.num + p.team) % CABELOS.length],
+      estilo: p.aspeto && p.aspeto.estilo, barba: p.aspeto && p.aspeto.barba,
       numero: p.num, corNumero: eq.numero, luvas: p.gk ? '#f8f9fa' : null,
+      nomeCostas: p.nome.split(' ').slice(-1)[0], gola: eq.gola,
+      botas: (p.aspeto && p.aspeto.botas) || ['#111111', '#00b4d8', '#e63946', '#f5f5f5', '#ffd60a'][(p.num * 3 + p.team) % 5],
     });
   }
 
   function criarModeloArbitro(a) {
-    const m = criarBoneco({ camisola: '#111111', calcoes: '#111111', meias: '#111111', pele: '#e0ac69', cabelo: '#1b1209' });
+    const m = criarBoneco({ camisola: '#111111', calcoes: '#111111', meias: '#111111', pele: '#e0ac69', cabelo: '#1b1209',
+      estilo: a.tipo === 'arbitro' ? 'rapado' : 'curto', barba: a.tipo === 'arbitro' });
     // Mão direita: cartão (árbitro) ou bandeira (fiscal)
     const mao = m.cotovelos[1];
     if (a.tipo === 'arbitro') {
       m.cartao = new THREE.Mesh(geo.cartao, matCartao.amarelo);
-      m.cartao.position.set(0, -4.8, 0);
+      m.cartao.position.set(0, -5.2, 0);
       m.cartao.visible = false;
       mao.add(m.cartao);
     } else {
       const pau = new THREE.Mesh(geo.pau, matDe('#dddddd'));
-      pau.position.set(0.6, -5.5, 0);
+      pau.position.set(0.6, -6.0, 0);
       const band = new THREE.Mesh(geo.bandeira, new THREE.MeshStandardMaterial({ color: '#ffd60a', side: THREE.DoubleSide }));
-      band.position.set(0.6, -7.2, 1.8);
+      band.position.set(0.6, -7.8, 1.8);
       band.rotation.y = Math.PI / 2;
       mao.add(pau, band);
     }
     return m;
   }
 
-  // Põe o boneco na pose certa: correr, carrinho, mergulho, festa, cartão...
-  function animarBoneco(m, d, dt, pose) {
+  // Põe o boneco na pose certa: correr, parado, guarda-redes à espera, carrinho, mergulho, festa...
+  function animarBoneco(m, d, dt, pose, olharPara) {
     const vel = Math.hypot(d.vx, d.vy);
-    m.fase += vel * dt * 0.11;
-    const amp = Math.min(1, vel / 140);
+    m.fase += vel * dt * 0.09;
+    const amp = Math.min(1, vel / 150);
     const s = Math.sin(m.fase);
     m.raiz.position.set(X(d.x), 0, Z(d.y));
     m.raiz.rotation.y = -d.facing;
     m.corpo.rotation.set(0, 0, 0);
     m.corpo.position.set(0, 0, 0);
+    // Respirar quando está parado
+    const resp = Math.sin(tempo.value * 2.2 + m.fase) * 0.06 * (1 - amp);
     for (let i = 0; i < 2; i++) {
       const fase = m.fase + i * Math.PI;
-      m.ancas[i].rotation.set(0, 0, Math.sin(fase) * amp * 0.85);
-      m.joelhos[i].rotation.z = -amp * (0.2 + 1.0 * Math.max(0, Math.cos(fase)));
-      m.ombros[i].rotation.set(0, 0, -Math.sin(fase) * amp * 0.75);
-      m.cotovelos[i].rotation.z = 0.35 + amp * 0.75;
+      const lado = i === 0 ? -1 : 1;
+      m.ancas[i].rotation.set(0, 0, Math.sin(fase) * amp * 0.9 + 0.05);
+      m.joelhos[i].rotation.z = -0.1 - amp * (0.15 + 1.2 * Math.max(0, Math.cos(fase)));
+      m.ombros[i].rotation.set(lado * 0.1, 0, -Math.sin(fase) * amp * 0.8 + resp);
+      m.cotovelos[i].rotation.z = 0.25 + amp * 0.9;
     }
-    m.corpo.rotation.z = -amp * 0.14;                        // inclina-se para a frente a correr
-    m.corpo.position.y = Math.abs(s) * amp * 0.8;
+    m.corpo.rotation.z = -amp * 0.16;                        // inclina-se para a frente a correr
+    // Inclina-se para dentro das curvas
+    let viragem = d.facing - (m.ultimaDir === undefined ? d.facing : m.ultimaDir);
+    while (viragem > Math.PI) viragem -= 2 * Math.PI;
+    while (viragem < -Math.PI) viragem += 2 * Math.PI;
+    m.ultimaDir = d.facing;
+    m.inclina = (m.inclina || 0) + (clamp(-viragem / Math.max(dt, 0.001) * 0.05 * amp, -0.3, 0.3) - (m.inclina || 0)) * Math.min(1, dt * 8);
+    m.corpo.rotation.x = m.inclina;
+    m.corpo.position.y = Math.abs(s) * amp * 0.9 - (1 - Math.cos(m.joelhos[0].rotation.z)) * 0.5;
+
+    // A cabeça segue a bola
+    m.cabeca.rotation.set(0, 0, 0);
+    if (olharPara !== undefined) {
+      let rel = olharPara - d.facing;
+      while (rel > Math.PI) rel -= 2 * Math.PI;
+      while (rel < -Math.PI) rel += 2 * Math.PI;
+      m.cabeca.rotation.y = -clamp(rel, -1.1, 1.1);
+    }
 
     if (pose === 'carrinho') {
       m.corpo.rotation.z = 1.2;
-      m.corpo.position.set(-3, 2.5, 0);
+      m.corpo.position.set(-4, 3, 0);
       m.ancas[0].rotation.z = 0.15; m.ancas[1].rotation.z = 0.45;
       m.joelhos[0].rotation.z = -0.9; m.joelhos[1].rotation.z = 0;
       m.ombros[0].rotation.z = m.ombros[1].rotation.z = -0.9;
+    } else if (pose === 'guarda') {
+      // Guarda-redes à espera: agachado, braços abertos
+      m.corpo.position.y = -2.2;
+      m.corpo.rotation.z = -0.3;
+      for (let i = 0; i < 2; i++) {
+        const lado = i === 0 ? -1 : 1;
+        m.ancas[i].rotation.z = 0.7 + Math.sin(m.fase) * amp * 0.3;
+        m.ancas[i].rotation.x = lado * 0.15;
+        m.joelhos[i].rotation.z = -1.0;
+        m.ombros[i].rotation.set(lado * 0.7, 0, 0.6);
+        m.cotovelos[i].rotation.z = 0.5;
+      }
     } else if (pose === 'mergulho') {
       const lado = Math.sign(Math.cos(d.facing) || 1) * d.mergulhoDir;
       const k = Math.min(1, (0.7 - d.mergulho) / 0.15);
       m.corpo.rotation.x = lado * 1.35 * k;
-      m.corpo.position.set(0, 3 * k, 0);
+      m.corpo.position.set(0, 4 * k, 0);
       m.ombros[0].rotation.set(lado * 0.3, 0, Math.PI * 0.95);
       m.ombros[1].rotation.set(lado * 0.3, 0, Math.PI * 0.95);
       m.cotovelos[0].rotation.z = m.cotovelos[1].rotation.z = 0;
+      m.joelhos[0].rotation.z = -0.3; m.joelhos[1].rotation.z = -0.1;
     } else if (pose === 'festa') {
       const salto = Math.abs(Math.sin(tempo.value * 8 + m.fase));
       m.corpo.rotation.z = 0;
@@ -506,11 +785,27 @@ const Render = (() => {
       m.ombros[0].rotation.set(0.35, 0, Math.PI * 0.92);
       m.ombros[1].rotation.set(-0.35, 0, Math.PI * 0.92);
       m.cotovelos[0].rotation.z = m.cotovelos[1].rotation.z = 0.1;
+      m.cabeca.rotation.set(0, 0, 0.4);
     } else if (pose === 'chuto') {
-      m.ancas[1].rotation.z = 1.25;
+      m.ancas[1].rotation.z = 1.3;
       m.joelhos[1].rotation.z = -0.1;
-      m.ancas[0].rotation.z = -0.3;
-      m.ombros[0].rotation.z = 0.8; m.ombros[1].rotation.z = -0.6;
+      m.ancas[0].rotation.z = -0.25;
+      m.joelhos[0].rotation.z = -0.3;
+      m.ombros[0].rotation.set(-0.6, 0, 0.7); m.ombros[1].rotation.set(0.6, 0, -0.6);
+      m.corpo.rotation.z = 0.1;
+    } else if (pose === 'cabeca') {
+      m.corpo.position.y = 3;
+      m.corpo.rotation.z = -0.35;
+      m.ombros[0].rotation.set(-0.8, 0, 0.3); m.ombros[1].rotation.set(0.8, 0, 0.3);
+      m.joelhos[0].rotation.z = m.joelhos[1].rotation.z = -0.8;
+    } else if (pose === 'sentado') {
+      m.corpo.position.y = -5.6;
+      for (let i = 0; i < 2; i++) {
+        m.ancas[i].rotation.z = 1.5;
+        m.joelhos[i].rotation.z = -1.5;
+        m.ombros[i].rotation.z = 0.35;
+        m.cotovelos[i].rotation.z = 1.1;
+      }
     } else if (pose === 'braco') {
       // Árbitro a mostrar o cartão / fiscal com a bandeira no ar
       m.ombros[1].rotation.set(0, 0, Math.PI * 0.97);
@@ -528,11 +823,15 @@ const Render = (() => {
       let m = modelos.get(p);
       if (!m) { m = criarModeloJogador(p); modelos.set(p, m); }
       let pose = null;
+      const b = v.bola;
       if (d.slide > 0 || d.chao > 0) pose = 'carrinho';
       else if (d.mergulho > 0) pose = 'mergulho';
       else if (!v.replay && (state === 'golo' || state === 'fim') && p.team === lastScorer) pose = 'festa';
+      else if (d.cabeceou > 0) pose = 'cabeca';
       else if (d.cooldown > 0.12) pose = 'chuto';
-      animarBoneco(m, d, dt, pose);
+      else if (p.gk && (p.team === 0 ? b.x < 330 : b.x > W - 330) && Math.hypot(d.vx, d.vy) < 90 &&
+               !(ball.owner === p)) pose = 'guarda';
+      animarBoneco(m, d, dt, pose, Math.atan2(b.y - d.y, b.x - d.x));
     }
     for (const d of v.arbitros) {
       const a = d.ref || d;
@@ -546,7 +845,7 @@ const Render = (() => {
         m.cartao.material = matCartao[d.cartao];
       } else if (m.cartao) m.cartao.visible = false;
       if (a.tipo === 'fiscal' && d.bandeira > 0) pose = 'braco';
-      animarBoneco(m, d, dt, pose);
+      animarBoneco(m, d, dt, pose, Math.atan2(v.bola.y - d.y, v.bola.x - d.x));
     }
     for (const [k, m] of modelos) {
       if (!vivos.has(k)) { scene.remove(m.raiz); modelos.delete(k); }
@@ -583,23 +882,55 @@ const Render = (() => {
 
   // ---------- Bola ----------
   const RB = 3.2;
-  const texBola = canvasTex(256, 128, (g, w, h) => {
-    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#111111';
-    for (let i = 0; i < 6; i++) {
-      for (let j = 0; j < 3; j++) {
-        const cx = (i + (j % 2) * 0.5) * w / 6, cy = (j + 0.5) * h / 3;
-        g.beginPath();
-        for (let k = 0; k < 5; k++) {
-          const a = k / 5 * Math.PI * 2 - Math.PI / 2;
-          g.lineTo(cx + Math.cos(a) * 13, cy + Math.sin(a) * 13);
+  // Textura da bola como uma bola a sério: 12 pentágonos e 20 hexágonos com costuras.
+  // Os centros dos gomos são os vértices de um icosaedro (pentágonos) e de um dodecaedro (hexágonos).
+  const texBola = (() => {
+    const fi = (1 + Math.sqrt(5)) / 2;
+    const pent = [], hexa = [];
+    for (const a of [-1, 1]) for (const b of [-1, 1]) {
+      pent.push([0, a, b * fi], [a, b * fi, 0], [b * fi, 0, a]);
+    }
+    for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) hexa.push([a, b, c]);
+    for (const a of [-1, 1]) for (const b of [-1, 1]) {
+      hexa.push([0, a / fi, b * fi], [a / fi, b * fi, 0], [b * fi, 0, a / fi]);
+    }
+    const norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
+    const centros = [...pent.map(v => ({ v: norm(v), p: true })), ...hexa.map(v => ({ v: norm(v), p: false }))];
+    const w = 1024, h = 512;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const g = c.getContext('2d');
+    const img = g.createImageData(w, h);
+    for (let j = 0; j < h; j++) {
+      const lat = Math.PI * (0.5 - (j + 0.5) / h);
+      for (let i = 0; i < w; i++) {
+        const lon = 2 * Math.PI * ((i + 0.5) / w) - Math.PI;
+        const d = [Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)];
+        let m1 = -2, m2 = -2, c1 = null;
+        for (const ce of centros) {
+          // Os pentágonos são mais pequenos do que os hexágonos
+          const dot = d[0] * ce.v[0] + d[1] * ce.v[1] + d[2] * ce.v[2] - (ce.p ? 0.03 : 0);
+          if (dot > m1) { m2 = m1; m1 = dot; c1 = ce; } else if (dot > m2) m2 = dot;
         }
-        g.fill();
+        let r, gg, b;
+        if (m1 - m2 < 0.012) { r = gg = b = 70; }                 // costura
+        else if (c1.p) { r = 22; gg = 24; b = 30; }               // pentágono preto
+        else {                                                     // hexágono branco
+          const brilho = 238 + (m1 - m2) * 60;
+          r = gg = b = Math.min(255, brilho);
+        }
+        const k = (j * w + i) * 4;
+        img.data[k] = r; img.data[k + 1] = gg; img.data[k + 2] = b; img.data[k + 3] = 255;
       }
     }
-  });
-  const bola = new THREE.Mesh(new THREE.SphereGeometry(RB, 24, 16),
-    new THREE.MeshStandardMaterial({ map: texBola, roughness: 0.4 }));
+    g.putImageData(img, 0, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    return t;
+  })();
+  const bola = new THREE.Mesh(new THREE.SphereGeometry(RB, 40, 28),
+    new THREE.MeshPhysicalMaterial({ map: texBola, roughness: 0.42, clearcoat: 0.7, clearcoatRoughness: 0.25 }));
   bola.castShadow = true;
   scene.add(bola);
   const eixo = new THREE.Vector3();
@@ -650,7 +981,7 @@ const Render = (() => {
   const moldura = new THREE.Mesh(new THREE.BoxGeometry(124, 66, 4), matDe('#15181f'));
   const imagem = new THREE.Mesh(new THREE.PlaneGeometry(116, 58), new THREE.MeshBasicMaterial({ map: ecraTex }));
   imagem.position.z = 2.1;
-  const pilar = new THREE.Mesh(new THREE.BoxGeometry(6, 140, 6), matBetao);
+  const pilar = new THREE.Mesh(new THREE.BoxGeometry(6, 140, 6), new THREE.MeshStandardMaterial({ color: '#5b6070' }));
   pilar.position.y = -100;
   ecra.add(moldura, imagem, pilar);
   ecra.position.set(X(0) - 200, 175, Z(0) - 190);
@@ -677,7 +1008,7 @@ const Render = (() => {
       g.font = '900 96px sans-serif';
       g.fillText(`${score[0]}-${score[1]}`, 256, 124);
       g.font = '700 26px sans-serif'; g.fillStyle = '#9fe0a6';
-      g.fillText(state === 'replay' ? 'REPETIÇÃO' : 'FUTEBOL 26', 256, 215);
+      g.fillText(state === 'replay' ? 'REPETIÇÃO' : ESTADIOS[estadioIdx].nome.toUpperCase(), 256, 215);
     }
     ecraTex.needsUpdate = true;
   }
@@ -694,6 +1025,12 @@ const Render = (() => {
       return;
     }
     const b = v.bola;
+    if (window.CAMARA_TESTE) {   // só para testes: câmara fixa
+      const c = window.CAMARA_TESTE;
+      camera.position.set(...c.pos); camera.lookAt(...c.alvo);
+      camera.fov = c.fov || 30; camera.updateProjectionMatrix();
+      return;
+    }
     if (v.replay) {
       // Repetição: câmara atrás da baliza onde entrou o golo, a seguir a bola
       const lado = lastScorer === 0 ? 1 : -1;
@@ -754,6 +1091,7 @@ const Render = (() => {
     else if (ball && (ball.x < 170 || ball.x > W - 170)) alvo = 0.3;
     excitacao.value += (alvo - excitacao.value) * Math.min(1, dt * 3);
     for (const t of placasTex) t.offset.x += dt * 0.03;
+    for (const b of bracosAdeptos) b.visible = excitacao.value > 0.5;
     atualizarEcra();
 
     bola.visible = !!emJogo;
@@ -783,5 +1121,53 @@ const Render = (() => {
     renderer.render(scene, camera);
   }
 
-  return { desenhar, noEcra };
+  // ---------- Bancos de suplentes com treinadores ----------
+  function bancoSuplentes(team, xCentro) {
+    const eq = EQUIPAS[team];
+    const zBanco = Z(H) + 22;
+    const vidro = new THREE.MeshStandardMaterial({ color: '#cfe8ff', transparent: true, opacity: 0.3, roughness: 0.1 });
+    const estrutura = new THREE.MeshStandardMaterial({ color: '#2b2f38', roughness: 0.6 });
+    const g = new THREE.Group();
+    const fundo = new THREE.Mesh(new THREE.BoxGeometry(60, 16, 1), estrutura);
+    fundo.position.set(0, 8, 5);
+    const teto = new THREE.Mesh(new THREE.BoxGeometry(62, 1, 12), vidro);
+    teto.position.set(0, 16, 0);
+    const banco = new THREE.Mesh(new THREE.BoxGeometry(56, 5, 4), matDe(eq.camisola));
+    banco.position.set(0, 2.5, 2.5);
+    g.add(fundo, teto, banco);
+    g.position.set(xCentro, 0, zBanco);
+    scene.add(g);
+    // Suplentes sentados
+    [12, 14, 23, 18].forEach((num, i) => {
+      const m = criarBoneco({
+        camisola: eq.camisola, calcoes: eq.calcoes, meias: eq.meias || eq.camisola, pele: PELES[(num + i + team) % PELES.length],
+        cabelo: CABELOS[(num + team) % CABELOS.length], estilo: ['curto', 'rapado', 'volume', 'curto'][i],
+        numero: num, corNumero: eq.numero, gola: eq.gola,
+      });
+      animarBoneco(m, { x: xCentro - 21 + i * 14 + W / 2, y: H + 22 + 1.5, facing: -Math.PI / 2, vx: 0, vy: 0 }, 0, 'sentado');
+    });
+    // Treinador de pé à frente do banco, a olhar para o jogo
+    const t = criarBoneco({ camisola: '#1d1f24', calcoes: '#1d1f24', meias: '#1d1f24', pele: '#e3b083', cabelo: '#555555',
+      estilo: 'curto', barba: team === 1 });
+    animarBoneco(t, { x: xCentro + W / 2 + 36, y: H + 12, facing: -Math.PI / 2, vx: 0, vy: 0 }, 0, null);
+  }
+  bancoSuplentes(0, -110);
+  bancoSuplentes(1, 110);
+
+  // Qualidade mais baixa para computadores lentos
+  function baixarQualidade() {
+    renderer.setPixelRatio(1);
+    luz.shadow.mapSize.set(1024, 1024);
+    if (luz.shadow.map) { luz.shadow.map.dispose(); luz.shadow.map = null; }
+    redimensionar();
+  }
+
+  mudarEstadio(0);
+
+  return {
+    desenhar, noEcra,
+    mudarEstadio: d => mudarEstadio(estadioIdx + d),
+    baixarQualidade,
+    get estadio() { return ESTADIOS[estadioIdx]; },
+  };
 })();

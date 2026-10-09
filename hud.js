@@ -125,32 +125,97 @@ const Hud = (() => {
     texto(`Primeiro a ${GOLS_PARA_GANHAR} golos ganha`, x + 125 * s, y + h + 17 * s, 12, '#c8d0e0', 'center', '600');
   }
 
+  // ---------- Carta dourada ao estilo do FC ----------
+  function cartaFC(x, y, w, h, p, mostrarNome = true) {
+    const ouro = ctx.createLinearGradient(x, y, x + w, y + h);
+    ouro.addColorStop(0, '#fff0b3');
+    ouro.addColorStop(0.45, '#e2b04a');
+    ouro.addColorStop(1, '#9c6b12');
+    const c = Math.min(w, h) * 0.18;
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 8 * s;
+    ctx.fillStyle = ouro;
+    ctx.beginPath();
+    ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c);
+    ctx.lineTo(x + w, y + h - c * 0.6); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h - c * 0.6);
+    ctx.lineTo(x, y + c); ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,248,210,0.9)';
+    ctx.lineWidth = 1.2 * s;
+    ctx.stroke();
+    const k = w / 50;
+    ctx.fillStyle = '#3a2a05';
+    ctx.textAlign = 'left';
+    ctx.font = `900 ${17 * k}px "Segoe UI", system-ui, sans-serif`;
+    ctx.fillText(String(p.ovr || 75), x + 6 * k, y + 19 * k);
+    ctx.font = `800 ${9 * k}px "Segoe UI", system-ui, sans-serif`;
+    ctx.fillText(p.posicao || '', x + 7 * k, y + 30 * k);
+    // Cor da equipa no canto
+    ctx.fillStyle = EQUIPAS[p.team].camisola;
+    ctx.fillRect(x + w - 15 * k, y + 8 * k, 9 * k, 6 * k);
+    if (mostrarNome) {
+      ctx.fillStyle = '#3a2a05';
+      ctx.textAlign = 'center';
+      ctx.font = `800 ${7.5 * k}px "Segoe UI", system-ui, sans-serif`;
+      ctx.fillText(p.chamado.split(' ').slice(-1)[0].toUpperCase(), x + w / 2, y + h - 12 * k, w - 6 * k);
+    }
+  }
+
   // ---------- Painel do jogador selecionado (em baixo) ----------
   function painelJogador(t) {
     const p = human[t];
     if (!p) return;
-    const w = 330 * s, h = 64 * s;
+    const w = 380 * s, h = 70 * s;
     const x = t === 0 ? 16 * s : canvas.width - w - 16 * s;
     const y = canvas.height - h - 16 * s;
     caixa(x, y, w, h, 'rgba(8,12,28,0.9)', 8);
     ctx.fillStyle = COR_J[t];
-    ctx.fillRect(x, y, 7 * s, h);
-    // Número e etiqueta J1/J2
-    texto(`J${t + 1}`, x + 18 * s, y + 22 * s, 13, COR_J[t]);
-    texto(`${p.num}`, x + 18 * s, y + 50 * s, 24, '#fff', 'left', '900');
-    // Nome em destaque
+    ctx.fillRect(x, y, 6 * s, h);
+    texto(`J${t + 1}`, x + 14 * s, y + 18 * s, 12, COR_J[t], 'left', '900');
+    // Carta dourada com a classificação
+    cartaFC(x + 14 * s, y + 22 * s, 34 * s, 44 * s, p, false);
+    // Nome em destaque (encolhe se for comprido)
+    const zonaNome = w - 60 * s - 92 * s;
     ctx.save();
     ctx.shadowColor = COR_J[t];
     ctx.shadowBlur = 10 * s;
-    texto(p.nome.toUpperCase(), x + 62 * s, y + 30 * s, 19, '#ffffff', 'left', '900');
-    ctx.restore();
-    texto(p.pos, x + 62 * s, y + 50 * s, 12, '#9aa6bf', 'left', '600');
-    // PlayStyle dourado a seguir ao nome
     ctx.font = `900 ${19 * s}px "Segoe UI", system-ui, sans-serif`;
-    const fimNome = x + 62 * s + ctx.measureText(p.nome.toUpperCase()).width;
-    const ix = Math.min(fimNome + 26 * s, x + w - 24 * s);
-    iconePS(p.ps, ix, y + 24 * s, 15 * s);
-    texto(p.ps, ix, y + 54 * s, 11, '#f4c542', 'center', '700');
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(p.nome.toUpperCase(), x + 60 * s, y + 32 * s, zonaNome);
+    ctx.restore();
+    const stats = p.gk ? `REF ${atr(p, 'ref')}` : `RIT ${atr(p, 'rit')} · REM ${atr(p, 'rem')} · PAS ${atr(p, 'pas')}`;
+    ctx.font = `700 ${11 * s}px "Segoe UI", system-ui, sans-serif`;
+    ctx.fillStyle = '#9aa6bf';
+    ctx.fillText(`#${p.num} · ${stats}`, x + 60 * s, y + 54 * s, zonaNome);
+    // PlayStyle dourado à direita do nome
+    const ix = x + w - 46 * s;
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(ix - 42 * s, y + 6 * s, 1 * s, h - 12 * s);
+    iconePS(p.ps, ix, y + 25 * s, 15 * s);
+    texto(p.ps, ix, y + 55 * s, 10, '#f4c542', 'center', '800');
+    texto('PLAYSTYLE+', ix, y + 65 * s, 7, '#c9a227', 'center', '800');
+  }
+
+  // Emblema dourado por cima do jogador quando o PlayStyle entra em ação (como no FC)
+  function popupsPS() {
+    for (const pp of popups) {
+      if (!players.includes(pp.p)) continue;
+      const c = Render.noEcra(pp.p.x, pp.p.y, 40, canvas.width, canvas.height);
+      if (!c.visivel) continue;
+      const vida = 1.6 - pp.t;                     // 0 → 1.6
+      const escala = Math.min(1, vida / 0.15) * (1 + Math.max(0, 0.15 - vida) * 2);
+      const alfa = Math.min(1, pp.t / 0.4);
+      ctx.save();
+      ctx.globalAlpha = alfa;
+      const yy = c.y - 10 * s - vida * 14 * s;
+      iconePS(pp.ps, c.x, yy, 17 * s * escala);
+      caixa(c.x - 52 * s, yy + 22 * s, 104 * s, 18 * s, 'rgba(20,14,0,0.85)', 9);
+      texto(pp.ps.toUpperCase(), c.x, yy + 35 * s, 10, '#f4c542', 'center', '900');
+      ctx.restore();
+    }
   }
 
   function minimapa() {
@@ -284,9 +349,28 @@ const Hud = (() => {
     ctx.restore();
     texto(`${EQUIPAS[0].nome}  vs  ${EQUIPAS[1].nome}  ·  2 jogadores  ·  primeiro a ${GOLS_PARA_GANHAR} golos`,
       canvas.width / 2, canvas.height * 0.2 + 42 * s, 17, '#9fe0a6', 'center', '700');
-    const y = canvas.height * 0.38;
+    // Escolha do estádio
+    const est = Render.estadio;
+    const ey = canvas.height * 0.2 + 62 * s;
+    caixa(canvas.width / 2 - 230 * s, ey, 460 * s, 40 * s, 'rgba(8,12,28,0.85)', 8);
+    texto('◀', canvas.width / 2 - 210 * s, ey + 27 * s, 18, '#ffd60a', 'center', '900');
+    texto('▶', canvas.width / 2 + 210 * s, ey + 27 * s, 18, '#ffd60a', 'center', '900');
+    texto(`${est.nome.toUpperCase()}`, canvas.width / 2, ey + 22 * s, 18, '#ffffff', 'center', '900');
+    texto(`${est.cidade} · ${est.dia ? 'de dia' : 'à noite'} · setas para mudar`, canvas.width / 2, ey + 35 * s, 10, '#9aa6bf', 'center', '600');
+    const y = canvas.height * 0.36;
     cartaoControlos(canvas.width / 2 - 380 * s, y, 0);
     cartaoControlos(canvas.width / 2 + 20 * s, y, 1);
+    // Escalações em cartas douradas
+    for (let t = 0; t < 2; t++) {
+      const x0 = canvas.width / 2 + (t === 0 ? -380 : 20) * s;
+      EQUIPAS[t].plantel.forEach((j, i) => {
+        const p = { ...j, team: t, chamado: j.chamado || j.nome.split(' ').slice(-1)[0] };
+        cartaFC(x0 + i * 72 * s, y + 222 * s, 64 * s, 86 * s, p);
+        iconePS(j.ps, x0 + i * 72 * s + 50 * s, y + 222 * s + 52 * s, 9 * s);
+      });
+    }
+    texto(Narrador.disponivel ? `Narrador: ${Narrador.ligado ? 'ligado' : 'desligado'} (tecla N)` :
+      'Narrador: este computador não tem voz em português', canvas.width / 2, canvas.height * 0.9 + 26 * s, 13, '#9aa6bf', 'center', '600');
     if (Math.floor(performance.now() / 500) % 2 === 0) {
       texto('Carrega ESPAÇO para começar', canvas.width / 2, canvas.height * 0.85, 24, '#ffd60a', 'center', '900');
     }
@@ -308,6 +392,7 @@ const Hud = (() => {
       return;
     }
     etiquetas();
+    popupsPS();
     placar();
     aviso_();
     painelJogador(0);

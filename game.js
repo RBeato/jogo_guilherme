@@ -43,21 +43,21 @@ addEventListener('blur', () => down.clear());
 
 // ---------- Equipas ----------
 const EQUIPAS = [
-  { nome: 'PORTUGAL', curto: 'POR', camisola: '#c8102e', calcoes: '#00573f', numero: '#ffd60a', gr: '#2b9348',
+  { nome: 'PORTUGAL', curto: 'POR', camisola: '#c8102e', calcoes: '#00573f', numero: '#ffd60a', gola: '#ffd60a', gr: '#2b9348',
     plantel: [
-      { nome: 'Diogo Costa', num: 22, ps: 'Reflexos' },
-      { nome: 'Rúben Dias', num: 4, ps: 'Muralha' },
-      { nome: 'Nuno Mendes', num: 19, ps: 'Rápido' },
-      { nome: 'Bruno Fernandes', num: 8, ps: 'Passe Incisivo' },
-      { nome: 'Cristiano Ronaldo', num: 7, ps: 'Remate Potente' },
+      { nome: 'Diogo Costa', chamado: 'Diogo Costa', num: 22, ovr: 84, posicao: 'GR', at: { ref: 86 }, ps: 'Reflexos', pele: '#e8b98a', cabelo: '#2a1a0e', estilo: 'curto', barba: true },
+      { nome: 'Rúben Dias', chamado: 'Rúben Dias', num: 4, ovr: 88, posicao: 'DC', at: { rit: 63, rem: 39, pas: 66, dri: 68, def: 89, fis: 88 }, ps: 'Muralha', pele: '#d9a273', cabelo: '#1b1209', estilo: 'curto', barba: true },
+      { nome: 'Nuno Mendes', chamado: 'Nuno Mendes', num: 19, ovr: 86, posicao: 'DE', at: { rit: 91, rem: 65, pas: 77, dri: 84, def: 80, fis: 79 }, ps: 'Rápido', pele: '#6b4226', cabelo: '#0d0d0d', estilo: 'volume', barba: false },
+      { nome: 'Bruno Fernandes', chamado: 'Bruno Fernandes', num: 8, ovr: 87, posicao: 'MCO', at: { rit: 74, rem: 86, pas: 89, dri: 83, def: 69, fis: 77 }, ps: 'Passe Incisivo', pele: '#e3b083', cabelo: '#2a1a0e', estilo: 'curto', barba: true },
+      { nome: 'Cristiano Ronaldo', num: 7, ovr: 85, posicao: 'PL', at: { rit: 77, rem: 88, pas: 75, dri: 79, def: 34, fis: 77 }, ps: 'Remate Potente', pele: '#d9a273', cabelo: '#1b1209', estilo: 'topete', barba: false, botas: '#f5f5f5' },
     ] },
-  { nome: 'FRANÇA', curto: 'FRA', camisola: '#1d3f8f', calcoes: '#ffffff', meias: '#c8102e', numero: '#ffffff', gr: '#f4a261',
+  { nome: 'FRANÇA', curto: 'FRA', camisola: '#1d3f8f', calcoes: '#ffffff', meias: '#c8102e', numero: '#ffffff', gola: '#ffffff', gr: '#c5e13a',
     plantel: [
-      { nome: 'Mike Maignan', num: 16, ps: 'Reflexos' },
-      { nome: 'William Saliba', num: 17, ps: 'Muralha' },
-      { nome: 'Theo Hernández', num: 22, ps: 'Carrinho' },
-      { nome: 'Aurélien Tchouaméni', num: 8, ps: 'Intercetor' },
-      { nome: 'Kylian Mbappé', num: 10, ps: 'Remate Colocado' },
+      { nome: 'Mike Maignan', num: 16, ovr: 87, posicao: 'GR', at: { ref: 89 }, ps: 'Reflexos', pele: '#5a3620', cabelo: '#0d0d0d', estilo: 'rapado', barba: true },
+      { nome: 'William Saliba', num: 17, ovr: 87, posicao: 'DC', at: { rit: 81, rem: 40, pas: 70, dri: 73, def: 88, fis: 84 }, ps: 'Muralha', pele: '#4a2c1a', cabelo: '#0d0d0d', estilo: 'rapado', barba: false },
+      { nome: 'Theo Hernández', chamado: 'Theo', num: 22, ovr: 84, posicao: 'DE', at: { rit: 89, rem: 72, pas: 76, dri: 80, def: 77, fis: 82 }, ps: 'Carrinho', pele: '#e3b083', cabelo: '#1b1209', estilo: 'curto', barba: true },
+      { nome: 'Aurélien Tchouaméni', num: 8, ovr: 85, posicao: 'MDC', at: { rit: 72, rem: 73, pas: 80, dri: 78, def: 84, fis: 85 }, ps: 'Intercetor', pele: '#4a2c1a', cabelo: '#0d0d0d', estilo: 'volume', barba: false },
+      { nome: 'Kylian Mbappé', num: 10, ovr: 91, posicao: 'PL', at: { rit: 97, rem: 90, pas: 80, dri: 92, def: 36, fis: 78 }, ps: 'Remate Colocado', pele: '#6b4226', cabelo: '#0d0d0d', estilo: 'rapado', barba: false, botas: '#ff6b00' },
     ] },
 ];
 
@@ -84,6 +84,8 @@ const FORMACAO_5 = [
 
 // ---------- Utilitários ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Atributo do jogador (ritmo, remate, passe, drible, defesa, físico, reflexos), 75 se não tiver
+const atr = (p, k) => (p && p.at && p.at[k]) || 75;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 // Roda o ângulo `a` em direção a `b`, no máximo `max` radianos
 const rodarPara = (a, b, max) => {
@@ -113,6 +115,15 @@ let fimDepois = false;         // o último golo acabou o jogo
 const arbitros = [];           // árbitro e dois fiscais de linha
 const GRAVACAO = [];           // últimos segundos de jogo, para a repetição
 const replay = { i: 0, t: 0 };
+const popups = [];             // emblemas dourados de PlayStyle a aparecer por cima dos jogadores
+let primeiroApito = true;
+
+// Um PlayStyle entrou em ação: mostra o emblema dourado por cima do jogador
+function psAtivo(p) {
+  if (!p || !p.ps || p.psCd > 0) return;
+  p.psCd = 3;
+  popups.push({ p, ps: p.ps, t: 1.6 });
+}
 let charge = [0, 0];           // força do remate (0 a 1)
 let charging = [false, false];
 let shotId = 0;
@@ -138,7 +149,9 @@ function createPlayers() {
       const b = basePos(team, slot);
       const j = EQUIPAS[team].plantel[slot];
       players.push({
-        team, slot, num: j.num, nome: j.nome, ps: j.ps, pos: f.pos, gk: slot === 0,
+        team, slot, num: j.num, nome: j.nome, chamado: j.chamado || j.nome.split(' ').slice(-1)[0],
+        ps: j.ps, pos: f.pos, gk: slot === 0, ovr: j.ovr, posicao: j.posicao, at: j.at || {},
+        aspeto: { pele: j.pele, cabelo: j.cabelo, estilo: j.estilo, barba: j.barba },
         x: b.x, y: b.y, vx: 0, vy: 0,
         facing: team === 0 ? 0 : Math.PI,
         cooldown: 0,      // tempo sem poder tocar na bola depois de chutar
@@ -156,6 +169,9 @@ function createPlayers() {
         mira: team === 0 ? 0 : Math.PI,   // direção das teclas (para onde remata/passa)
         toque: 0,         // fase dos toques na bola ao correr
         mergulho: 0, mergulhoDir: 0,      // mergulho do guarda-redes
+        cabeceou: 0,      // animação de cabeceamento
+        psCd: 0,          // espera até o PlayStyle poder voltar a aparecer
+        corrida: 0,       // tempo a correr com a bola em velocidade máxima
       });
     });
   }
@@ -199,6 +215,8 @@ function newGame() {
   kickoffTeam = 0;
   createPlayers();
   criarArbitros();
+  primeiroApito = true;
+  popups.length = 0;
   resetKickoff();
   aviso = null;
 }
@@ -209,6 +227,7 @@ function kick(p, angle, speed, lift = 0) {
   ball.vx = Math.cos(angle) * speed;
   ball.vy = Math.sin(angle) * speed;
   ball.vz = lift;
+  ball.curva = 0;
   ball.ps = p.ps;
   Som.chuto(speed);
   ball.lastTouch = p;
@@ -217,6 +236,32 @@ function kick(p, angle, speed, lift = 0) {
   ball.potente = ball.colocado = ball.remate = false;
   shotId++;
   if (state === 'parada') { state = 'jogo'; setPiece = null; }
+}
+
+function cabecear(p) {
+  const goalX = p.team === 0 ? W : 0;
+  const perto = Math.abs(goalX - p.x) < 300 && Math.abs(p.y - H / 2) < 200;
+  let ang, vel, lift;
+  if (perto) {
+    // Perto da baliza: cabeceia para a baliza, para baixo
+    const ty = H / 2 + (Math.random() - 0.5) * (GOAL_W - 30);
+    ang = Math.atan2(ty - p.y, goalX - p.x);
+    vel = 420 + Math.random() * 130;
+    lift = -60;
+  } else {
+    ang = direcao(p);
+    vel = 300;
+    lift = 140;
+  }
+  kick(p, ang, vel, lift);
+  if (perto) {
+    ball.remate = true;
+    ball.colocado = Math.random() < 0.5;
+    ball.potente = vel > 490;
+  }
+  p.cabeceou = 0.45;
+  p.cooldown = 0.35;
+  Narrador.cabeca(p.chamado);
 }
 
 function canTouchBall(p) {
@@ -230,24 +275,43 @@ function direcao(p) {
 
 function shoot(p, power) {
   const f = direcao(p);
-  let angle = f;
-  let colocado = false;
+  let angle = f, colocado = false, curva = 0;
   const goalX = p.team === 0 ? W : 0;
   const toGoal = Math.atan2(H / 2 - p.y, goalX - p.x);
+  const finesse = p.ps === 'Remate Colocado';
+  const potentePS = p.ps === 'Remate Potente';
+  const velocidade = (380 + power * 520) * (potentePS ? 1.12 : 1) * (0.88 + atr(p, 'rem') / 100 * 0.17);
   // Virado para a baliza: na diagonal remata para um canto, a direito remata ao meio
   if (angDiff(f, toGoal) < Math.PI / 3 && Math.abs(goalX - p.x) < 450) {
     const vert = Math.sin(f);
     colocado = Math.abs(vert) > 0.3;
-    const ty = H / 2 + (colocado ? Math.sign(vert) * (GOAL_W / 2 - 22) : 0);
-    angle = Math.atan2(ty - ball.y, goalX - ball.x);
+    const lado = Math.sign(vert);
+    const ty = H / 2 + (colocado ? lado * (GOAL_W / 2 - (finesse ? 16 : 22)) : 0);
+    const dx = goalX - ball.x, dy = ty - ball.y;
+    const d = Math.hypot(dx, dy);
+    angle = Math.atan2(dy, dx);
+    if (colocado && !(power > 0.85 && !finesse)) {
+      // Remate em arco: sai por fora do poste e a curva traz a bola para dentro
+      const acel = finesse ? 950 : 550;
+      const T = d / (velocidade * 0.9);
+      const desvio = 0.5 * acel * T * T * 0.7;
+      const sinal = -lado * Math.sign(Math.cos(angle) || 1);
+      curva = sinal * acel;
+      angle -= sinal * Math.atan2(desvio, d);
+    }
   }
-  angle += (Math.random() - 0.5) * 0.04;
-  const forte = p.ps === 'Remate Potente' ? 1.15 : 1;
-  kick(p, angle, (380 + power * 520) * forte, 60 + power * 150 + Math.random() * 30);
+  // Pontaria: remates no máximo da força falham mais (o Remate Potente não)
+  const erro = potentePS ? 0.03 : finesse && colocado ? 0.02 : power > 0.85 ? 0.1 : 0.05;
+  angle += (Math.random() - 0.5) * erro * (1.6 - atr(p, 'rem') / 100);
+  const lift = potentePS ? 35 + power * 90 : curva ? 90 + power * 100 : 60 + power * 150;
+  kick(p, angle, velocidade, lift + Math.random() * 25);
+  ball.curva = curva;
   ball.ps = p.ps;
-  ball.potente = power > (p.ps === 'Remate Potente' ? 0.5 : 0.7);
+  ball.potente = power > (potentePS ? 0.5 : 0.7);
   ball.remate = true;
   ball.colocado = colocado;
+  if ((potentePS && power > 0.5) || (finesse && colocado)) psAtivo(p);
+  Narrador.remate(p.chamado);
 }
 
 function pass(p) {
@@ -264,13 +328,19 @@ function pass(p) {
   }
   if (!best) { kick(p, f, 330); return; }
   // Passa para onde o colega vai estar
+  const incisivo = p.ps === 'Passe Incisivo';
   const d = dist(p, best);
-  const speed = clamp(d * 1.5 + 160, 260, 650) * (p.ps === 'Passe Incisivo' ? 1.2 : 1);
+  const speed = clamp(d * 1.5 + 160, 260, 650) * (incisivo ? 1.2 : 1);
   const t = d / speed;
-  const tx = best.x + best.vx * t, ty = best.y + best.vy * t;
-  // Passes longos vão pelo ar, por cima dos adversários
+  // Passe Incisivo: põe a bola no espaço à frente do colega, a caminho da baliza
+  const frente = incisivo && !best.gk && d > 120 ? 60 : 0;
+  const tx = clamp(best.x + best.vx * t + attackDir(p.team) * frente, 10, W - 10);
+  const ty = clamp(best.y + best.vy * t, 10, H - 10);
+  // Passes longos vão pelo ar, por cima dos adversários; os normais falham um bocadinho mais
   const lift = d > 220 ? clamp((d - 150) * 0.9, 0, 300) : 0;
-  kick(p, Math.atan2(ty - p.y, tx - p.x), speed, lift);
+  const erro = (incisivo ? 0.01 : 0.03 + d / 6000) * (1.7 - atr(p, 'pas') / 100);
+  kick(p, Math.atan2(ty - p.y, tx - p.x) + (Math.random() - 0.5) * erro, speed, lift);
+  if (frente) psAtivo(p);
 }
 
 function switchPlayer(team) {
@@ -367,7 +437,12 @@ function updateAI(p, dt) {
       dist(p, ball) < dist(human[p.team], ball)) {
     target = { x: ball.x, y: ball.y };
   }
-  moveTowards(p, target.x, target.y, p.ps === 'Rápido' ? 157 : 140, dt);
+  if (p.ps === 'Intercetor' && !ball.owner && ball.lastTouch && ball.lastTouch.team !== p.team &&
+      dist(p, ball) < 160 && Math.hypot(ball.vx, ball.vy) > 150) {
+    // Lê o passe e vai cortá-lo onde a bola vai passar
+    target = { x: ball.x + ball.vx * 0.35, y: ball.y + ball.vy * 0.35 };
+  }
+  moveTowards(p, target.x, target.y, 140 * (0.86 + atr(p, 'rit') / 100 * 0.25) * (p.ps === 'Rápido' ? 1.06 : 1), dt);
   const sp = Math.hypot(p.vx, p.vy);
   if (sp > 20) p.facing = Math.atan2(p.vy, p.vx);
 }
@@ -411,19 +486,24 @@ function updateHuman(p, t, dt) {
     charging[t] = true; charge[t] = 0;
   }
 
-  let speed = ball.owner === p ? 160 : 175;
-  if (p.ps === 'Rápido') speed *= 1.12;
+  let speed = (ball.owner === p ? 160 : 175) * (0.86 + atr(p, 'rit') / 100 * 0.25);
+  if (p.ps === 'Rápido') speed *= 1.06;
   if (p.stun > 0) speed *= 0.6;
   if (len) {
     p.mira = Math.atan2(dy, dx);
     // Vira-se aos poucos (com bola vira mais devagar), como um jogador a sério
-    p.facing = rodarPara(p.facing, p.mira, (ball.owner === p ? 9 : 14) * dt);
+    p.facing = rodarPara(p.facing, p.mira, (ball.owner === p ? 9 * (0.75 + atr(p, 'dri') / 100 * 0.35) : 14) * dt);
   }
   // Corre para onde está virado; ao travar e arrancar há um bocadinho de inércia
   const wantVx = len ? Math.cos(p.facing) * speed : 0;
   const wantVy = len ? Math.sin(p.facing) * speed : 0;
-  p.vx += (wantVx - p.vx) * Math.min(1, dt * 7);
-  p.vy += (wantVy - p.vy) * Math.min(1, dt * 7);
+  const arranque = p.ps === 'Rápido' ? 10 : 7;
+  p.vx += (wantVx - p.vx) * Math.min(1, dt * arranque);
+  p.vy += (wantVy - p.vy) * Math.min(1, dt * arranque);
+  if (p.ps === 'Rápido' && ball.owner === p && Math.hypot(p.vx, p.vy) > 175) {
+    p.corrida += dt;
+    if (p.corrida > 1) psAtivo(p);
+  } else p.corrida = 0;
 
   // Larga o botão 2 para rematar
   if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 0.9);
@@ -473,6 +553,7 @@ function updateSlide(p, dt) {
     if (porTras || !tocaBola) return foul(p, owner, porTras);
     // Carrinho limpo: a bola sai disparada
     owner.stun = 0.6; owner.holdTime = 0; owner.perdeuBola = 0.6;
+    if (p.ps === 'Carrinho') psAtivo(p);
     kick(p, p.slideDir + (Math.random() - 0.5) * 0.6, 230);
     return;
   }
@@ -494,6 +575,9 @@ function foul(culpado, vitima, porTras) {
   const tipo = inPenaltyBox(culpado.team, vitima.x, vitima.y) ? 'penalti' : 'livre';
   const arb = arbitros[0];
   if (arb) { arb.apito = 1.2; arb.cartao = cartao; arb.cartaoT = cartao ? 2.2 : 0; }
+  if (tipo === 'penalti') Narrador.penalti();
+  else if (cartao) Narrador.cartao(culpado.chamado, cartao);
+  else Narrador.falta(culpado.chamado);
   let x = clamp(vitima.x, 20, W - 20), y = clamp(vitima.y, 20, H - 20);
   if (tipo === 'penalti') { x = culpado.team === 0 ? 110 : W - 110; y = H / 2; }
   const quem = culpado.nome;
@@ -584,7 +668,7 @@ function keepAway() {
 
 function ballOut() {
   const last = ball.lastTouch ? ball.lastTouch.team : 0;
-  if (ball.remate && (ball.x < 0 || ball.x > W) && Math.abs(ball.y - H / 2) < GOAL_W) Som.uh();
+  if (ball.remate && (ball.x < 0 || ball.x > W) && Math.abs(ball.y - H / 2) < GOAL_W) { Som.uh(); Narrador.uh(); }
   const fiscal = arbitros.filter(a => a.tipo === 'fiscal')
     .reduce((a, b) => (dist(b, ball) < dist(a, ball) ? b : a), arbitros[1]);
   if (fiscal) fiscal.bandeira = 1.6;
@@ -597,6 +681,7 @@ function ballOut() {
   if (last === defende) {
     const x = defende === 0 ? 4 : W - 4;
     const y = ball.y < H / 2 ? 4 : H - 4;
+    Narrador.canto();
     return startSetPiece('canto', 1 - defende, x, y);
   }
   startSetPiece('baliza', defende, defende === 0 ? 45 : W - 45, H / 2);
@@ -617,17 +702,38 @@ function updateBall(dt) {
     ball.vx = p.vx; ball.vy = p.vy;
     ball.z = 0; ball.vz = 0;
   } else {
+    // Efeito (curva): a bola desvia-se para o lado enquanto voa
+    if (ball.curva) {
+      const v = Math.hypot(ball.vx, ball.vy);
+      if (v > 50) {
+        const nx = -ball.vy / v, ny = ball.vx / v;
+        ball.vx += nx * ball.curva * dt;
+        ball.vy += ny * ball.curva * dt;
+      }
+      ball.curva *= Math.pow(0.6, dt);
+      if (Math.abs(ball.curva) < 5) ball.curva = 0;
+    }
     ball.x += ball.vx * dt;
     ball.y += ball.vy * dt;
     ball.z += ball.vz * dt;
     ball.vz -= GRAVIDADE * dt;
     if (ball.z <= 0) {
-      // Quando cai, a bola salta um bocadinho
+      // Quando cai, a bola salta e perde um pouco de velocidade
       ball.z = 0;
-      ball.vz = ball.vz < -80 ? -ball.vz * 0.45 : 0;
+      if (ball.vz < -80) { ball.vz = -ball.vz * 0.5; ball.vx *= 0.9; ball.vy *= 0.9; }
+      else ball.vz = 0;
     }
-    const f = Math.pow(ball.z > 1 ? 0.85 : 0.42, dt);   // no ar trava menos que na relva
-    ball.vx *= f; ball.vy *= f;
+    if (ball.z > 1) {
+      const f = Math.pow(0.85, dt);       // resistência do ar
+      ball.vx *= f; ball.vy *= f;
+    } else {
+      // A rolar na relva trava cada vez mais devagar
+      const v = Math.hypot(ball.vx, ball.vy);
+      if (v > 0) {
+        const nv = Math.max(0, v - (35 + v * 0.8) * dt);
+        ball.vx *= nv / v; ball.vy *= nv / v;
+      }
+    }
   }
 
   // A bola só sai quando passa toda a linha
@@ -649,16 +755,43 @@ function handlePossession() {
   for (const p of players) {
     if (p.cooldown > 0 || p.stun > 0 || p.slide > 0 || p.chao > 0 || ball.owner === p) continue;
     const d = dist(p, ball);
+    // Bola alta à altura da cabeça: cabeceamento
+    if (!ball.owner && !p.gk && ball.z > 12 && ball.z < 30 && d < PLAYER_R + 9 && ball.lastTouch !== p) {
+      cabecear(p);
+      continue;
+    }
     if (ball.z > (p.gk ? 45 : 14)) continue;
+    // Bola muito rápida bate no corpo do jogador e ressalta
+    if (!ball.owner && !p.gk && ballSpeed >= 520 && d < PLAYER_R + BALL_R && ball.lastTouch !== p) {
+      const nx = (ball.x - p.x) / (d || 1), ny = (ball.y - p.y) / (d || 1);
+      const vn = ball.vx * nx + ball.vy * ny;
+      if (vn < 0) {
+        ball.vx = (ball.vx - 2 * vn * nx) * 0.4 + (Math.random() - 0.5) * 80;
+        ball.vy = (ball.vy - 2 * vn * ny) * 0.4 + (Math.random() - 0.5) * 80;
+        ball.vz = 50 + Math.random() * 120;
+        ball.curva = 0;
+        ball.lastTouch = p;
+        ball.remate = ball.potente = false;
+        p.cooldown = 0.25;
+        shotId++;
+        Som.chuto(250);
+      }
+      continue;
+    }
 
-    if (p.gk && !ball.owner && d < PLAYER_R + 30 && p.gkShot !== shotId) {
+    // O GR tenta defender a bola que lhe passa perto OU um remate à baliza ao alcance do mergulho
+    const linhaGolo = p.team === 0 ? 0 : W;
+    const vaiParaBaliza = (linhaGolo - ball.x) * ball.vx > 0;
+    const alcanceMergulho = vaiParaBaliza && ballSpeed >= 300 &&
+      Math.abs(ball.x - p.x) < 22 && Math.abs(ball.y - p.y) < (p.ps === 'Reflexos' ? 92 : 85);
+    if (p.gk && !ball.owner && p.gkShot !== shotId && (d < PLAYER_R + 30 || alcanceMergulho)) {
       // Regra do Guilherme: o GR defende se o remate não for potente nem colocado
       p.gkShot = shotId;
       const lado = ball.y - p.y;
       if (ballSpeed > 300 && Math.abs(lado) > 8) {
         // Atira-se para o lado da bola
         p.mergulho = 0.7; p.mergulhoDir = Math.sign(lado);
-        p.vy = Math.sign(lado) * 230; p.vx = 0;
+        p.vy = Math.sign(lado) * (p.ps === 'Reflexos' ? 280 : 230); p.vx = 0;
       }
       let chance;
       if (ballSpeed < 350) chance = 1;
@@ -667,8 +800,29 @@ function handlePossession() {
       else chance = 0.95;
       if (ball.colocado && ball.ps === 'Remate Colocado') chance *= 0.6;
       if (p.ps === 'Reflexos' && ballSpeed >= 350) chance = Math.min(1, chance + 0.05);
+      if (ballSpeed >= 350) chance = clamp(chance + (atr(p, 'ref') - 86) / 100, 0, 1);
       const r = Math.random();
-      if (r < chance) { ball.owner = p; p.holdTime = 0; if (ballSpeed > 350) Som.defesa(); }
+      if (r < chance && Math.abs(lado) > 34 && ballSpeed >= 350) {
+        // Defesa a mergulhar: longe do corpo não dá para agarrar, desvia a bola para fora
+        ball.vx = -Math.sign(ball.vx) * (60 + Math.random() * 90);
+        ball.vy = Math.sign(lado) * (220 + Math.random() * 160);
+        ball.vz = 60 + Math.random() * 80;
+        ball.curva = 0;
+        ball.lastTouch = p;
+        ball.remate = ball.potente = false;
+        shotId++;
+        p.gkShot = shotId;
+        Som.defesa();
+        Narrador.defesa(p.chamado);
+        if (p.ps === 'Reflexos') psAtivo(p);
+      } else if (r < chance) {
+        ball.owner = p; p.holdTime = 0; ball.curva = 0;
+        if (ballSpeed > 350) {
+          Som.defesa();
+          Narrador.defesa(p.chamado);
+          if (p.ps === 'Reflexos') psAtivo(p);
+        }
+      }
       else if (r < chance + 0.2 && d < PLAYER_R + 12) {
         // Toca na bola mas não a agarra
         ball.vx *= -0.3; ball.vy = (Math.random() - 0.5) * 350; ball.lastTouch = p;
@@ -678,13 +832,25 @@ function handlePossession() {
 
     const corta = p.ps === 'Intercetor';
     if (!ball.owner && d < PLAYER_R + BALL_R + (corta ? 8 : 4) && ballSpeed < (corta ? 750 : 520)) {
-      ball.owner = p; p.holdTime = 0; ball.lastTouch = p;
+      const deQuem = ball.lastTouch;
+      ball.owner = p; p.holdTime = 0; ball.lastTouch = p; ball.curva = 0;
+      if (corta && deQuem && deQuem.team !== p.team && ballSpeed > 380) psAtivo(p);
+      if (deQuem && deQuem !== p && deQuem.team === p.team && !p.gk) Narrador.passe(p.chamado);
     } else if (ball.owner && ball.owner.team !== p.team && !ball.owner.gk &&
                d < PLAYER_R + BALL_R + 3 && p.tentativa <= 0) {
       // Tentativa de roubar a bola encostando: nem sempre resulta
       p.tentativa = 0.5;
-      const chance = ball.owner.ps === 'Muralha' ? 0.2 : 0.4;
-      if (ball.owner.holdTime > 0.5 && Math.random() < chance) {
+      // Muralha: ganha os duelos de ombro e é difícil tirar-lhe a bola
+      const dono = ball.owner;
+      let chance = 0.4 * (0.5 + atr(p, 'def') / 100 * 0.7) * (1.5 - atr(dono, 'dri') / 100) *
+        (1 + (atr(p, 'fis') - atr(dono, 'fis')) / 120);
+      if (dono.ps === 'Muralha') chance *= 0.5;
+      if (p.ps === 'Muralha') chance *= 1.6;
+      chance = clamp(chance, 0.08, 0.85);
+      const ganhou = ball.owner.holdTime > 0.5 && Math.random() < chance;
+      if (!ganhou && ball.owner.ps === 'Muralha') psAtivo(ball.owner);
+      if (ganhou && p.ps === 'Muralha') psAtivo(p);
+      if (ganhou) {
         ball.owner.stun = 0.3;
         ball.owner.perdeuBola = 0.6;
         ball.owner.holdTime = 0;
@@ -716,6 +882,8 @@ function goal(team) {
   Som.golo();
   const t = ball.lastTouch;
   marcador = t ? (t.team === team ? t.nome : `${t.nome} (autogolo)`) : '';
+  if (t && t.team === team) Narrador.golo(t.chamado);
+  else Narrador.autogolo(t ? t.chamado : '');
   score[team]++;
   lastScorer = team;
   kickoffTeam = 1 - team;
@@ -727,7 +895,11 @@ function goal(team) {
 
 // ---------- Ciclo principal ----------
 function update(dt) {
+  if (pressed.has('KeyN')) Narrador.alternar();
   if (state === 'titulo') {
+    // Setas (ou A/D) para escolher o estádio
+    if (pressed.has('ArrowRight') || pressed.has('KeyD')) Render.mudarEstadio(1);
+    if (pressed.has('ArrowLeft') || pressed.has('KeyA')) Render.mudarEstadio(-1);
     if (pressed.has('Space')) newGame();
     return;
   }
@@ -752,6 +924,7 @@ function update(dt) {
     return;
   }
   if (aviso) { aviso.t -= dt; if (aviso.t <= 0) aviso = null; }
+  for (let i = popups.length - 1; i >= 0; i--) { popups[i].t -= dt; if (popups[i].t <= 0) popups.splice(i, 1); }
   updateArbitros(dt);
   if (state === 'apito') {
     stateTimer -= dt;
@@ -765,6 +938,7 @@ function update(dt) {
       state = 'jogo';
       ball.owner = human[kickoffTeam];
       Som.apito(false);
+      if (primeiroApito) { Narrador.inicio(); primeiroApito = false; }
     }
     return;
   }
@@ -773,6 +947,8 @@ function update(dt) {
     p.cooldown = Math.max(0, p.cooldown - dt);
     p.stun = Math.max(0, p.stun - dt);
     p.perdeuBola = Math.max(0, p.perdeuBola - dt);
+    p.cabeceou = Math.max(0, p.cabeceou - dt);
+    p.psCd = Math.max(0, p.psCd - dt);
     p.tentativa = Math.max(0, p.tentativa - dt);
     if (ball.owner === p) p.holdTime += dt;
     const t = human.indexOf(p);
@@ -832,7 +1008,7 @@ function gravar(dt) {
     bola: { x: ball.x, y: ball.y, z: ball.z, vx: ball.vx, vy: ball.vy },
     jogadores: players.map(p => ({
       ref: p, x: p.x, y: p.y, facing: p.facing, vx: p.vx, vy: p.vy, slide: p.slide, chao: p.chao,
-      cooldown: p.cooldown, mergulho: p.mergulho, mergulhoDir: p.mergulhoDir, team: p.team,
+      cooldown: p.cooldown, mergulho: p.mergulho, mergulhoDir: p.mergulhoDir, team: p.team, cabeceou: p.cabeceou,
     })),
     arbitros: arbitros.map(a => ({ ...a, ref: a })),
   });
@@ -863,6 +1039,7 @@ function acabarReplay() {
     state = 'fim';
     stateTimer = 1.5;
     Som.apito(true);
+    Narrador.fim(EQUIPAS[lastScorer].nome);
   } else resetKickoff();
 }
 

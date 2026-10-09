@@ -44,6 +44,12 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - O guarda-redes atira-se para o lado nos remates.
 - Ecrã gigante no estádio com o resultado.
 - O jogador vira-se aos poucos e vai dando toques na bola quando corre com ela.
+- Bola com gomos de 5 e 6 lados; faz curva no ar, salta, trava na relva, bate nos jogadores e ressalta.
+- Cabeceamentos com bolas altas.
+- Narrador em português (voz do computador; tecla N liga/desliga). Só fala se o computador
+  tiver uma voz em português instalada.
+- Bancos de suplentes com treinadores; adeptos com bandeiras de Portugal e França.
+- Se o computador for lento, o jogo baixa a qualidade sozinho.
 
 ## 4. Equipas
 
@@ -57,6 +63,17 @@ Nomes reais e cores das camisolas (sem emblemas oficiais nem fotografias):
 Os jogadores têm **nomes reais**. Cada jogador tem um PlayStyle.
 Por agora o jogo é sempre **Portugal vs França** (5 jogadores cada).
 
+Cada jogador tem uma **carta dourada ao estilo do FC** com classificação, posição e atributos
+(RIT, REM, PAS, DRI, DEF, FIS; REF nos guarda-redes). Os atributos mudam mesmo o jogo:
+velocidade, força e pontaria do remate, precisão do passe, duelos.
+**Atenção:** os números são estimativas nossas, não são os números oficiais do FC 26.
+
+## 4b. Estádios
+
+Escolhe-se no ecrã inicial com as setas: Estádio da Luz, Estádio do Dragão, Estádio José Alvalade,
+Santiago Bernabéu, Wembley (com o arco), Allianz Arena (faixa vermelha), Maracanã.
+São inspirados nos verdadeiros (cores das cadeiras, telhado, dia/noite), não são cópias exatas.
+
 ## 5. Regras
 
 - Ganha quem chegar primeiro ao número de golos escolhido.
@@ -66,6 +83,21 @@ Por agora o jogo é sempre **Portugal vs França** (5 jogadores cada).
 - **Penáltis** — modo próprio no menu
 
 ## 6. PlayStyles (inspirados no FC 26)
+
+Quando um PlayStyle entra em ação aparece o **emblema dourado por cima do jogador**, como no FC.
+
+| PlayStyle (no jogo) | O que faz |
+|---|---|
+| Remate Potente (Ronaldo) | Remate mais forte, mais rasteiro e mais certeiro mesmo com força máxima |
+| Remate Colocado (Mbappé) | Remate em arco que curva para o canto, muito difícil para o GR |
+| Passe Incisivo (Bruno Fernandes) | Passe em profundidade, para o espaço à frente do colega |
+| Rápido (Nuno Mendes) | Arranca mais depressa e corre mais |
+| Muralha (Rúben Dias, Saliba) | Ganha os duelos de ombro, difícil tirar-lhe a bola |
+| Carrinho (Theo) | Carrinhos chegam mais longe e quase não dão cartão |
+| Intercetor (Tchouaméni) | Lê os passes e corta-os |
+| Reflexos (guarda-redes) | Mergulha mais longe e mais depressa |
+
+### Lista original de ideias
 
 Cada PlayStyle tem de mudar alguma coisa no jogo de verdade. Exemplos:
 
