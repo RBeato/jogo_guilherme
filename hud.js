@@ -3,7 +3,7 @@
 const Hud = (() => {
   const canvas = document.getElementById('hud');
   const ctx = canvas.getContext('2d');
-  const COR_J = ['#ffd60a', '#4cc9f0'];
+  const COR_J = ['#ff3b3b', '#4cc9f0'];   // J1 vermelho, J2 azul
   const etiqueta = t => (eCPU(t) ? 'CPU' : `J${t + 1}`);
   let s = 1;   // escala (pixels do ecrã)
 
@@ -249,7 +249,7 @@ const Hud = (() => {
     for (let t = 0; t < 2; t++) {
       const p = human[t];
       if (!p || state === 'golo' || state === 'fim') continue;
-      const c = Render.noEcra(p.x, p.y, 36, canvas.width, canvas.height);
+      const c = Render.noEcra(p.x, p.y, 46, canvas.width, canvas.height);   // por cima da seta e da barra do cartão
       if (c.visivel) {
         texto(etiqueta(t), c.x, c.y, 14, COR_J[t], 'center', '900');
         if (charging[t]) {

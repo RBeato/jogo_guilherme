@@ -874,8 +874,9 @@ const Render = (() => {
     }
   }
 
-  // Marcadores dos jogadores controlados (anel no chão + seta por cima)
-  const marcadores = ['#ffd60a', '#4cc9f0'].map(cor => {
+  // Marcadores dos jogadores controlados (anel no chão + seta por cima; J1 vermelho, J2 azul)
+  // Se o jogador controlado tiver cartão amarelo, aparece uma barra amarela por cima da seta.
+  const marcadores = ['#ff3b3b', '#4cc9f0'].map(cor => {
     const g = new THREE.Group();
     const anel = new THREE.Mesh(new THREE.RingGeometry(11, 13.5, 32),
       new THREE.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0.9, depthWrite: false }));
@@ -884,8 +885,12 @@ const Render = (() => {
     const seta = new THREE.Mesh(new THREE.ConeGeometry(2.6, 5, 4), new THREE.MeshBasicMaterial({ color: cor }));
     seta.rotation.x = Math.PI;
     seta.position.y = 30;
-    g.add(anel, seta);
+    const barra = new THREE.Sprite(new THREE.SpriteMaterial({ color: '#ffd60a', depthTest: false }));
+    barra.scale.set(9, 2.6, 1);
+    barra.visible = false;
+    g.add(anel, seta, barra);
     g.userData.seta = seta;
+    g.userData.barra = barra;
     scene.add(g);
     return g;
   });
@@ -1156,6 +1161,8 @@ const Render = (() => {
       if (g.visible) {
         g.position.set(X(p.x), 0, Z(p.y));
         g.userData.seta.position.y = 32 + Math.sin(tempo.value * 6) * 1.5;
+        g.userData.barra.visible = p.amarelos > 0;
+        g.userData.barra.position.y = g.userData.seta.position.y + 6;
       }
     });
     const sp = state === 'parada' && setPiece && setPiece.taker;
