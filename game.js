@@ -157,6 +157,45 @@ let fimDepois = false;         // o último golo acabou o jogo
 let tempoRestante = TEMPO_JOGO; // segundos que faltam
 let desempate = null;          // desempate por penáltis (null = jogo normal)
 let vencedor = 0;              // equipa que ganhou o jogo
+let festejo = null;
+let golosT = 3.5;              // quanto dura o ecrã de golo            // celebração de quem marcou: { p, tipo, t }
+
+// ---------- Celebrações ----------
+// As estrelas têm a celebração famosa delas; os outros escolhem uma das normais
+const CELEBRACOES = {
+  'Cristiano Ronaldoi': 'siu', 'Kylian Mbappéi': 'bracos', 'Erling Haalandi': 'meditar',
+  'Lionel Messii': 'ceu', 'Jude Bellinghami': 'abrir', 'Vinícius Júniori': 'danca',
+  'Guilherme.B': 'aviao', 'Gonçalo.B': 'mortal',
+};
+const NOMES_CELEBRACAO = {
+  siu: 'SIIIIUUUUU!', bracos: 'Braços cruzados', meditar: 'Meditação', ceu: 'Dedos para o céu',
+  abrir: 'Braços abertos', danca: 'Dança', aviao: 'Avião', mortal: 'Mortal para trás',
+  joelhos: 'De joelhos', punho: 'Murro no ar', festa: 'Aos saltos',
+};
+function celebracaoDe(p) {
+  if (CELEBRACOES[p.nome]) return CELEBRACOES[p.nome];
+  const normais = ['joelhos', 'punho', 'festa'];
+  let h = 0;
+  for (const ch of p.nome) h = (h * 31 + ch.charCodeAt(0)) % 997;
+  return normais[h % normais.length];
+}
+
+// Quem marcou corre um bocadinho para o lado da câmara e depois faz a celebração
+function atualizarFestejo(dt) {
+  const f = festejo;
+  f.t += dt;
+  const p = f.p;
+  if (f.t < 0.9) {
+    const ty = H - 50, tx = clamp(p.x, 120, W - 120);
+    const a = Math.atan2(ty - p.y, tx - p.x);
+    const d = Math.hypot(ty - p.y, tx - p.x);
+    const v = d > 8 ? 130 : 0;
+    p.vx = Math.cos(a) * v; p.vy = Math.sin(a) * v;
+    if (v) p.facing = a;
+  } else { p.vx = p.vy = 0; }
+  p.x += p.vx * dt; p.y += p.vy * dt;
+  if (f.tipo === 'siu' && !f.gritou && f.t > 1.75) { f.gritou = true; Narrador.siu(); }
+}
 const arbitros = [];           // árbitro e dois fiscais de linha
 const GRAVACAO = [];           // últimos segundos de jogo, para a repetição
 const replay = { i: 0, t: 0 };
@@ -238,6 +277,7 @@ function createPlayers() {
 }
 
 function resetKickoff() {
+  festejo = null;
   for (const p of players) {
     const b = basePos(p.team, p.slot);
     p.x = b.x; p.y = b.y; p.vx = p.vy = 0;
@@ -1623,6 +1663,7 @@ function goal(team) {
   if (desempate) {
     // Golo no desempate: conta para os penáltis, não para o resultado do jogo
     marcador = desempate.quem ? desempate.quem.nome : '';
+    festejo = null;
     if (desempate.quem) Narrador.golo(desempate.quem.chamado);
     lastScorer = team;
     ball.owner = null;
@@ -1635,6 +1676,7 @@ function goal(team) {
   marcador = t ? (t.team === team ? t.nome : `${t.nome} (autogolo)`) : '';
   if (t && t.team === team) Narrador.golo(t.chamado);
   else Narrador.autogolo(t ? t.chamado : '');
+  festejo = t && t.team === team ? { p: t, tipo: celebracaoDe(t), t: 0 } : null;
   Comando.vibrar(team, 1, 600);   // o comando de quem marcou vibra
   score[team]++;
   lastScorer = team;
@@ -1642,7 +1684,8 @@ function goal(team) {
   ball.owner = null;
   fimDepois = score[team] >= GOLS_PARA_GANHAR;
   state = 'golo';
-  stateTimer = 3.5;
+  stateTimer = festejo ? 4.6 : 3.5;
+  golosT = stateTimer;
 }
 
 // ---------- Ciclo principal ----------
@@ -1678,7 +1721,8 @@ function update(dt) {
     ball.vx *= 0.9; ball.vy *= 0.9;
     ball.z = Math.max(0, ball.z - 40 * dt);
     ball.x = clamp(ball.x, -GOAL_D + BALL_R, W + GOAL_D - BALL_R);
-    if (stateTimer > 2.3) gravar(dt);   // grava a bola a entrar na rede
+    if (stateTimer > golosT - 1.2) gravar(dt);   // grava a bola a entrar na rede
+    if (festejo && !desempate) atualizarFestejo(dt);
     if (stateTimer <= 0) { if (desempate) seguintePenalti('', ''); else comecarReplay(); }
     return;
   }

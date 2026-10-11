@@ -833,6 +833,136 @@ const Render = (() => {
     }
   }
 
+  // ---------- Celebrações de golo ----------
+  // t = segundos desde o golo (até 0.9 s o jogador ainda está a correr para a câmara)
+  function celebrar(m, tipo, t) {
+    const c = t - 0.9;                       // tempo desde que começou a celebração
+    const T = tempo.value;
+    m.raiz.rotation.y = -Math.PI / 2;        // virado para a câmara
+    m.corpo.rotation.set(0, 0, 0);
+    m.corpo.position.set(0, 0, 0);
+    m.cabeca.rotation.set(0, 0, 0);
+    const pernasDireitas = () => {
+      for (let i = 0; i < 2; i++) { m.ancas[i].rotation.set(0, 0, 0); m.joelhos[i].rotation.z = 0; }
+    };
+    pernasDireitas();
+    const L = [-1, 1];                       // lado de cada braço/perna
+    if (tipo === 'siu') {
+      if (c < 0.35) {
+        // Prepara o salto: agacha-se
+        const k = c / 0.35;
+        m.corpo.position.y = -2.5 * k;
+        for (let i = 0; i < 2; i++) { m.ancas[i].rotation.z = 0.6 * k; m.joelhos[i].rotation.z = -1.1 * k; }
+        m.ombros[0].rotation.set(0, 0, -0.6 * k); m.ombros[1].rotation.set(0, 0, -0.6 * k);
+      } else if (c < 0.85) {
+        // Salta e dá meia volta no ar
+        const k = (c - 0.35) / 0.5;
+        m.corpo.position.y = Math.sin(k * Math.PI) * 16;
+        m.raiz.rotation.y = -Math.PI / 2 + Math.PI * k;
+        for (let i = 0; i < 2; i++) { m.ancas[i].rotation.set(L[i] * 0.25, 0, 0.2); m.joelhos[i].rotation.z = -0.5; }
+        m.ombros[0].rotation.set(-1.2, 0, 0.3); m.ombros[1].rotation.set(1.2, 0, 0.3);
+      } else {
+        // Aterra de costas para a câmara, pernas abertas e braços para baixo e para trás: SIUUU!
+        const k = Math.min(1, (c - 0.85) / 0.12);
+        m.raiz.rotation.y = -Math.PI / 2 + Math.PI;
+        m.corpo.position.y = -1.6 * k;
+        m.corpo.rotation.z = 0.12 * k;
+        for (let i = 0; i < 2; i++) {
+          m.ancas[i].rotation.set(L[i] * 0.42 * k, 0, 0.15 * k);
+          m.joelhos[i].rotation.z = -0.35 * k;
+          m.ombros[i].rotation.set(L[i] * 0.75 * k, 0, -0.55 * k);
+          m.cotovelos[i].rotation.z = 0.05;
+        }
+        m.cabeca.rotation.z = 0.35 * k;
+      }
+    } else if (tipo === 'bracos') {
+      // Braços cruzados à frente do peito, muito sério
+      for (let i = 0; i < 2; i++) {
+        m.ombros[i].rotation.set(-L[i] * 0.55, 0, 1.0);
+        m.cotovelos[i].rotation.z = 1.9;
+      }
+      m.cabeca.rotation.z = 0.12;
+    } else if (tipo === 'meditar') {
+      // Sentado de pernas cruzadas, mãos nos joelhos, olhos fechados
+      m.corpo.position.y = -6.2;
+      for (let i = 0; i < 2; i++) {
+        m.ancas[i].rotation.set(L[i] * 0.9, 0, 1.45);
+        m.joelhos[i].rotation.z = -2.3;
+        m.ombros[i].rotation.set(L[i] * 0.35, 0, 0.55);
+        m.cotovelos[i].rotation.z = 0.35;
+      }
+      m.corpo.position.y += Math.sin(T * 1.5) * 0.15;
+    } else if (tipo === 'ceu') {
+      // Dois dedos para o céu, a olhar para cima
+      for (let i = 0; i < 2; i++) { m.ombros[i].rotation.set(L[i] * 0.15, 0, Math.PI * 0.88); m.cotovelos[i].rotation.z = 0.1; }
+      m.cabeca.rotation.z = 0.55;
+    } else if (tipo === 'abrir') {
+      // Braços bem abertos, peito para fora
+      for (let i = 0; i < 2; i++) { m.ombros[i].rotation.set(L[i] * 1.45, 0, 0.15); m.cotovelos[i].rotation.z = 0.05; }
+      m.corpo.rotation.z = 0.15;
+      m.cabeca.rotation.z = 0.2;
+    } else if (tipo === 'danca') {
+      // Dança: anca para um lado e para o outro, braços a mexer
+      const sw = Math.sin(T * 9);
+      m.corpo.rotation.x = sw * 0.22;
+      m.corpo.position.y = Math.abs(Math.sin(T * 9)) * 1.5;
+      for (let i = 0; i < 2; i++) {
+        m.joelhos[i].rotation.z = -0.35 - 0.25 * Math.max(0, L[i] * sw);
+        m.ancas[i].rotation.z = 0.2;
+        m.ombros[i].rotation.set(L[i] * 0.6, 0, 1.2 + L[i] * sw * 0.7);
+        m.cotovelos[i].rotation.z = 1.2;
+      }
+    } else if (tipo === 'aviao') {
+      // Avião: braços abertos e inclinado, a dar voltas
+      m.raiz.rotation.y = -Math.PI / 2 + c * 2.2;
+      m.corpo.rotation.x = 0.35 * Math.sin(T * 3);
+      m.corpo.rotation.z = -0.15;
+      for (let i = 0; i < 2; i++) { m.ombros[i].rotation.set(L[i] * 1.5, 0, 0); m.cotovelos[i].rotation.z = 0; }
+      const passo = Math.sin(T * 12);
+      m.ancas[0].rotation.z = passo * 0.5; m.ancas[1].rotation.z = -passo * 0.5;
+    } else if (tipo === 'mortal') {
+      // Mortal para trás e depois braços no ar
+      if (c < 0.3) {
+        const k = c / 0.3;
+        m.corpo.position.y = -2.5 * k;
+        for (let i = 0; i < 2; i++) { m.ancas[i].rotation.z = 0.6 * k; m.joelhos[i].rotation.z = -1.1 * k; }
+      } else if (c < 1.0) {
+        const k = (c - 0.3) / 0.7;
+        m.corpo.position.y = 6 + Math.sin(k * Math.PI) * 14;
+        m.corpo.rotation.z = k * Math.PI * 2;      // volta completa para trás
+        for (let i = 0; i < 2; i++) { m.ancas[i].rotation.z = 1.3 * Math.sin(k * Math.PI); m.joelhos[i].rotation.z = -1.8 * Math.sin(k * Math.PI); }
+        m.ombros[0].rotation.set(0, 0, 0.8); m.ombros[1].rotation.set(0, 0, 0.8);
+      } else {
+        for (let i = 0; i < 2; i++) { m.ombros[i].rotation.set(L[i] * 0.35, 0, Math.PI * 0.92); m.cotovelos[i].rotation.z = 0.1; }
+        m.corpo.position.y = Math.abs(Math.sin(T * 7)) * 2;
+      }
+    } else if (tipo === 'joelhos') {
+      // De joelhos, inclinado para trás, braços no ar
+      m.corpo.position.y = -4.5;
+      m.corpo.rotation.z = 0.25;
+      for (let i = 0; i < 2; i++) {
+        m.ancas[i].rotation.set(L[i] * 0.2, 0, -0.1);
+        m.joelhos[i].rotation.z = -1.55;
+        m.ombros[i].rotation.set(L[i] * 0.5, 0, Math.PI * 0.85);
+      }
+      m.cabeca.rotation.z = 0.45;
+    } else if (tipo === 'punho') {
+      // Murros no ar com o braço direito
+      const k = Math.abs(Math.sin(T * 6));
+      m.ombros[1].rotation.set(0.25, 0, 1.5 + 1.4 * k);
+      m.cotovelos[1].rotation.z = 1.2 * (1 - k);
+      m.ombros[0].rotation.set(-0.2, 0, 0.2);
+      m.cotovelos[0].rotation.z = 1.4;
+      m.corpo.position.y = k * 1.2;
+    } else {
+      // Aos saltos com os braços no ar
+      const salto = Math.abs(Math.sin(T * 8));
+      m.corpo.position.y = salto * 4;
+      for (let i = 0; i < 2; i++) { m.joelhos[i].rotation.z = -salto * 0.6; m.ombros[i].rotation.set(L[i] * -0.35, 0, Math.PI * 0.92); }
+      m.cabeca.rotation.z = 0.4;
+    }
+  }
+
   // Animação de cada finta
   function rodarFinta(m, d) {
     if (!(d.finta > 0)) return;
@@ -884,7 +1014,10 @@ const Render = (() => {
       else if (d.cooldown > 0.2) pose = 'chuto';
       else if (p.gk && (p.team === 0 ? b.x < 330 : b.x > W - 330) && Math.hypot(d.vx, d.vy) < 90 &&
                !(ball.owner === p)) pose = 'guarda';
+      const celebra = !v.replay && state === 'golo' && festejo && festejo.p === p;
+      if (celebra) pose = festejo.t < 0.9 ? null : 'celebracao';
       animarBoneco(m, d, dt, pose, Math.atan2(b.y - d.y, b.x - d.x));
+      if (celebra && festejo.t >= 0.9) celebrar(m, festejo.tipo, festejo.t);
       rodarFinta(m, d);
     }
     for (const d of v.arbitros) {
@@ -1170,6 +1303,14 @@ const Render = (() => {
       alvoPos.set(bx - Math.cos(a) * 105 + px * 24, 46, bz - Math.sin(a) * 105 + pz * 24);
       alvoOlhar.set(bx + Math.cos(a) * 170, 14, bz + Math.sin(a) * 170);
       alvoFov = 50;
+    }
+    // Celebração: depois de a bola entrar, câmara baixa e perto de quem marcou (como na TV)
+    if (state === 'golo' && festejo && festejo.t > 0.5 && !v.replay) {
+      modo = 'festejo';
+      const p = festejo.p;
+      alvoPos.set(X(p.x) - 25, 34, Z(p.y) + 125);
+      alvoOlhar.set(X(p.x), 11, Z(p.y));
+      alvoFov = 32;
     }
     // Ao trocar de câmara, desliza suavemente em vez de saltar
     if (modo !== modoCamara) { modoCamara = modo; transicao = 0; }

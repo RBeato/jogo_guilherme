@@ -662,7 +662,7 @@ const Hud = (() => {
     } else {
       texto('🎮 Tens um comando? Liga-o e carrega num botão.', canvas.width / 2, canvas.height - 14 * s, 12, '#9aa6bf', 'center', '600');
     }
-    texto(Narrador.disponivel ? `Narrador: ${Narrador.ligado ? 'ligado' : 'desligado'} (tecla N)` :
+    texto(Narrador.disponivel ? `Narrador: ${Narrador.ligado ? 'ligado' : 'desligado'} (tecla N) · voz ${Narrador.nomeVoz}${Narrador.masculina ? '' : ' (não há voz de homem neste computador)'}` :
       'Narrador: este computador não tem voz em português', canvas.width - 16 * s, 24 * s, 12, '#9aa6bf', 'right', '600');
     if (Math.floor(performance.now() / 500) % 2 === 0) {
       texto('Carrega ESPAÇO para começar', canvas.width / 2, my + 116 * s, 24, '#ffd60a', 'center', '900');
@@ -705,11 +705,23 @@ const Hud = (() => {
     painelJogador(0);
     painelJogador(1);
     // Nos livres e penáltis a câmara está atrás do jogador: o minimapa tapava a jogada
-    if (!(state === 'parada' && setPiece && (setPiece.tipo === 'livre' || setPiece.tipo === 'penalti'))) minimapa();
+    if (state !== 'golo' && !(state === 'parada' && setPiece && (setPiece.tipo === 'livre' || setPiece.tipo === 'penalti'))) minimapa();
     dicaBolaParada();
     avisoComando();
     if (state === 'inicio') textoGrande([['PRONTOS?', 52, '#fff']]);
-    if (state === 'golo') textoGrande([['GOLO!', 110, '#ffd60a'], [marcador, 30, '#fff'], [EQUIPAS[lastScorer].nome, 20, '#c8d0e0']]);
+    if (state === 'golo') {
+      if (festejo && festejo.t > 0.9) {
+        // Durante a celebração, o texto vai para baixo para se ver o jogador
+        const siu = festejo.tipo === 'siu';
+        if (siu && festejo.t > 1.75) {
+          ctx.save(); ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 16 * s;
+          texto('SIIIIUUUUU!', canvas.width / 2, canvas.height * 0.2, 80, '#ffd60a', 'center', '900');
+          ctx.restore();
+        }
+        texto(marcador, canvas.width / 2, canvas.height - 150 * s, 30, '#ffffff', 'center', '900');
+        if (!siu) texto(`Celebração: ${NOMES_CELEBRACAO[festejo.tipo]}`, canvas.width / 2, canvas.height - 120 * s, 18, '#ffd60a', 'center', '800');
+      } else textoGrande([['GOLO!', 110, '#ffd60a'], [marcador, 30, '#fff'], [EQUIPAS[lastScorer].nome, 20, '#c8d0e0']]);
+    }
     if (state === 'fim') {
       const l = [[`${EQUIPAS[vencedor].nome} GANHA!`, 66, '#ffd60a'], [`${score[0]} - ${score[1]}`, 44, '#fff']];
       if (desempate) l.push([`${desempate.golos[0]} - ${desempate.golos[1]} nos penáltis`, 26, '#ffd60a']);

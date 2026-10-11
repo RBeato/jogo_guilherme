@@ -116,6 +116,17 @@ Escolhe-se no ecrã inicial com as setas: Estádio da Luz, Estádio do Dragão, 
 Santiago Bernabéu, Wembley (com o arco), Allianz Arena (faixa vermelha), Maracanã.
 São inspirados nos verdadeiros (cores das cadeiras, telhado, dia/noite), não são cópias exatas.
 
+## 4b. Celebrações e narrador
+
+- Depois de marcar, o jogador corre para a câmara e faz a **sua celebração**; a câmara desce e
+  vai para perto dele. Celebrações das estrelas: Cristiano Ronaldoi **SIIIIUUUUU** (salta, dá meia
+  volta e aterra de braços abertos), Mbappéi braços cruzados, Haalandi meditação, Messii dedos
+  para o céu, Bellinghami braços abertos, Vinícius Júniori dança, **Guilherme.B avião**,
+  **Gonçalo.B mortal para trás**. Os outros: de joelhos, murro no ar ou aos saltos.
+- **Narrador homem e animado:** procura uma voz masculina em português (primeiro de Portugal,
+  depois do Brasil). As vozes vêm do computador: se só houver voz de mulher, usa essa com o tom
+  mais grave e o menu avisa. Fala mais depressa e com frases mais entusiasmadas.
+
 ## 5. Regras
 
 - O jogo dura **no máximo 2 minutos** (o relógio fica vermelho nos últimos 10 segundos).
