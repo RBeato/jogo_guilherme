@@ -10,6 +10,8 @@ const BALL_R = 5;
 const PLAYER_R = 11;
 const GOAL_H = 50;       // altura da baliza
 const GRAVIDADE = 900;
+// Velocidade de todos os jogadores (1 = a antiga). O Guilherme pediu que corressem mais devagar.
+const RITMO = 0.8;
 const GOLS_PARA_GANHAR = 5;
 
 // ---------- Teclas ----------
@@ -608,7 +610,7 @@ function updateGoalkeeper(p, dt) {
     tx = goalX + dir * 22;
     ty = clamp(H / 2 + (ball.y - H / 2) * 0.4, H / 2 - GOAL_W / 2 + 12, H / 2 + GOAL_W / 2 - 12);
   }
-  moveTowards(p, tx, ty, 150, dt);
+  moveTowards(p, tx, ty, 150 * RITMO, dt);
   p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
 }
 
@@ -633,7 +635,7 @@ function updateAI(p, dt) {
     // Lê o passe e vai cortá-lo onde a bola vai passar
     target = { x: ball.x + ball.vx * 0.35, y: ball.y + ball.vy * 0.35 };
   }
-  moveTowards(p, target.x, target.y, 140 * (0.86 + atr(p, 'rit') / 100 * 0.25) * (1 + 0.03 * ps(p, 'Rápido')) *
+  moveTowards(p, target.x, target.y, 140 * RITMO * (0.86 + atr(p, 'rit') / 100 * 0.25) * (1 + 0.03 * ps(p, 'Rápido')) *
     nivelEquipa(p, 'vel', 1), dt);
   const sp = Math.hypot(p.vx, p.vy);
   if (sp > 20) p.facing = Math.atan2(p.vy, p.vx);
@@ -698,7 +700,7 @@ function updateHuman(p, t, dt) {
     charging[t] = true; charge[t] = 0;
   }
 
-  let speed = (ball.owner === p ? 160 : 175) * (0.86 + atr(p, 'rit') / 100 * 0.25);
+  let speed = (ball.owner === p ? 160 : 175) * RITMO * (0.86 + atr(p, 'rit') / 100 * 0.25);
   if (down.has(`Pad${t}Sprint`)) speed *= 1.1;      // ZR: sprint (só no comando)
   speed *= 1 + 0.03 * ps(p, 'Rápido');
   if (p.stun > 0 && !ps(p, 'Incansável')) speed *= 0.6;
@@ -713,7 +715,7 @@ function updateHuman(p, t, dt) {
   const arranque = 7 + 1.5 * ps(p, 'Arranque Rápido') + ps(p, 'Rápido');
   p.vx += (wantVx - p.vx) * Math.min(1, dt * arranque);
   p.vy += (wantVy - p.vy) * Math.min(1, dt * arranque);
-  if (ps(p, 'Rápido') && ball.owner === p && Math.hypot(p.vx, p.vy) > 175) {
+  if (ps(p, 'Rápido') && ball.owner === p && Math.hypot(p.vx, p.vy) > 175 * RITMO) {
     p.corrida += dt;
     if (p.corrida > 1) psAtivo(p, 'Rápido');
   } else p.corrida = 0;
@@ -783,7 +785,7 @@ function controlosComando(p, t, temBola, dt) {
     p.tentativa = 0;
     const a = Math.atan2(ball.y - p.y, ball.x - p.x);
     p.facing = p.mira = a;
-    p.vx = Math.cos(a) * 230; p.vy = Math.sin(a) * 230;
+    p.vx = Math.cos(a) * 230 * RITMO; p.vy = Math.sin(a) * 230 * RITMO;
   }
 }
 
@@ -826,7 +828,7 @@ function desequilibrar(p, raio, extra) {
     if (q.team === p.team || q.gk || dist(q, p) > raio) continue;
     let chance = 0.3 + atr(p, 'dri') / 100 * 0.5 + 0.12 * ps(p, 'Habilidoso') + extra;
     chance *= 1 - 0.25 * ps(q, 'Marcação');
-    if (Math.random() < chance) { q.stun = 0.7; q.tentativa = 0.7; enganou = true; }
+    if (Math.random() < chance) { q.stun = 0.9; q.tentativa = 0.9; enganou = true; }
   }
   return enganou;
 }
@@ -867,7 +869,7 @@ function fazerFinta(p, dx, dy, espera = false) {
     // A bola sobe por trás e passa por cima da cabeça do defesa; o jogador corre para a apanhar
     ball.owner = null;
     // A bola cai logo à frente do jogador, que vai a correr apanhá-la
-    const vel = Math.max(140, Math.hypot(p.vx, p.vy)) + 25;
+    const vel = Math.max(115, Math.hypot(p.vx, p.vy)) + 20;
     ball.vx = fx * vel; ball.vy = fy * vel;
     ball.vz = 270; ball.curva = 0; ball.dip = 0;
     ball.lastTouch = p; ball.remate = false;
@@ -879,7 +881,8 @@ function fazerFinta(p, dx, dy, espera = false) {
     const def = players.filter(q => q.team !== p.team && !q.gk && dist(q, p) < 45)
       .sort((a, b) => dist(a, p) - dist(b, p))[0];
     ball.owner = null;
-    ball.vx = fx * 260; ball.vy = fy * 260; ball.vz = 0; ball.curva = 0;
+    const velCueca = Math.max(120, Math.hypot(p.vx, p.vy)) + 45;
+    ball.vx = fx * velCueca; ball.vy = fy * velCueca; ball.vz = 0; ball.curva = 0;
     ball.lastTouch = p; ball.remate = false;
     p.cooldown = 0.25;
     shotId++;
@@ -915,7 +918,7 @@ function moverFinta(p, speed, dt) {
 
 // ---------- Computador (controla o jogador ativo da equipa do J2) ----------
 function velocidadeCPU(p) {
-  let v = (ball.owner === p ? 160 : 175) * (0.86 + atr(p, 'rit') / 100 * 0.25) * NIVEIS[nivel].vel;
+  let v = (ball.owner === p ? 160 : 175) * RITMO * (0.86 + atr(p, 'rit') / 100 * 0.25) * NIVEIS[nivel].vel;
   v *= 1 + 0.03 * ps(p, 'Rápido');
   if (p.stun > 0) v *= 0.6;
   return v;
@@ -1089,7 +1092,7 @@ function updateSlide(p, dt) {
     p.vx *= 0.8; p.vy *= 0.8;
     return;
   }
-  const sp = 330 * (0.4 + 0.6 * p.slide / 0.35);
+  const sp = 330 * RITMO * (0.4 + 0.6 * p.slide / 0.35);
   p.vx = Math.cos(p.slideDir) * sp;
   p.vy = Math.sin(p.slideDir) * sp;
   p.slide -= dt;
@@ -1357,7 +1360,8 @@ function updateBall(dt) {
       // A rolar na relva trava cada vez mais devagar
       const v = Math.hypot(ball.vx, ball.vy);
       if (v > 0) {
-        const nv = Math.max(0, v - (35 + v * 0.8) * dt);
+        // Os remates (batidos com força) travam menos do que os passes
+        const nv = Math.max(0, v - (ball.remate ? 20 + v * 0.4 : 35 + v * 0.8) * dt);
         ball.vx *= nv / v; ball.vy *= nv / v;
       }
     }
@@ -1436,10 +1440,12 @@ function handlePossession() {
         p.vy = Math.sign(lado) * (230 + 25 * ps(p, 'Reflexos') + 20 * ps(p, 'Alcance')); p.vx = 0;
       }
       let chance;
-      if (ballSpeed < (ball.remate ? 200 : 350)) chance = 1;
-      if (!ball.remate) chance = ball.z > 20 && !ps(p, 'Corta Cruzamentos') ? 0.8 : 1;   // cruzamento alto às vezes escapa das mãos
-      if (!ball.remate && ps(p, 'Corta Cruzamentos')) psAtivo(p, 'Corta Cruzamentos');
-      else if (ball.potente && ball.colocado) chance = 0.1;
+      if (!ball.remate) {
+        // Cruzamentos e passes: agarra; um cruzamento alto às vezes escapa das mãos
+        chance = ball.z > 20 && !ps(p, 'Corta Cruzamentos') ? 0.8 : 1;
+        if (ps(p, 'Corta Cruzamentos')) psAtivo(p, 'Corta Cruzamentos');
+      } else if (ballSpeed < 200) chance = 1;                     // remate muito fraco: agarra
+      else if (ball.potente && ball.colocado) chance = 0.1;       // regra do Guilherme
       else if (ball.potente || ball.colocado) chance = 0.35;
       else chance = 0.95;
       if (ball.colocado) chance *= 1 - 0.2 * ps(ball.atirador, 'Remate Colocado');
@@ -1478,6 +1484,8 @@ function handlePossession() {
       continue;
     }
 
+    // O GR que já tentou defender este remate (e falhou) não o pode agarrar a seguir
+    if (p.gk && ball.remate && p.gkShot === shotId && ballSpeed > 150) continue;
     const corta = ps(p, 'Intercetor');
     const toque = ps(p, 'Primeiro Toque');
     if (!ball.owner && d < PLAYER_R + BALL_R + 4 + 2 * corta && ballSpeed < 520 + 115 * corta + 70 * toque) {
@@ -1657,7 +1665,7 @@ function updateArbitros(dt) {
       ty = a.y;
       a.bandeira = Math.max(0, a.bandeira - dt);
     }
-    moveTowards(a, tx, ty, 150, dt);
+    moveTowards(a, tx, ty, 150 * RITMO, dt);
     a.x += a.vx * dt;
     a.y += a.vy * dt;
     const paraBola = Math.atan2(ball.y - a.y, ball.x - a.x);
