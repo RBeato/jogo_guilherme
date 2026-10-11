@@ -584,6 +584,14 @@ const Hud = (() => {
       texto(tec, bx + 22 * s, my + 26 * s, 15, ativo ? '#ffd60a' : '#111', 'center', '900');
       texto(txt, bx + 44 * s, my + 26 * s, 15, ativo ? '#0b1020' : '#ffffff', 'left', '900');
     });
+    if (Comando.ligados) {
+      texto(`🎮 Comando (como no FC 26 na Switch): B passe · A remate/desarme · Y passe alto/carrinho · X profundidade · L mudar · R+A colocado · ZR sprint · analógico direito fintas`,
+        canvas.width / 2, canvas.height - 30 * s, 12, '#c8d0e0', 'center', '700');
+      texto(`No menu: L contra o computador · R 2 jogadores · ZL 5v5 · ZR 11v11 · + começar`,
+        canvas.width / 2, canvas.height - 12 * s, 12, '#9aa6bf', 'center', '600');
+    } else {
+      texto('🎮 Tens um comando? Liga-o e carrega num botão.', canvas.width / 2, canvas.height - 14 * s, 12, '#9aa6bf', 'center', '600');
+    }
     texto(Narrador.disponivel ? `Narrador: ${Narrador.ligado ? 'ligado' : 'desligado'} (tecla N)` :
       'Narrador: este computador não tem voz em português', canvas.width - 16 * s, 24 * s, 12, '#9aa6bf', 'right', '600');
     if (Math.floor(performance.now() / 500) % 2 === 0) {
@@ -591,9 +599,23 @@ const Hud = (() => {
     }
   }
 
+  // Mensagem quando se liga/desliga um comando
+  function avisoComando() {
+    const a = Comando.aviso;
+    if (!a) return;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, a.t);
+    ctx.font = `800 ${15 * s}px "Segoe UI", system-ui, sans-serif`;
+    const w = ctx.measureText(a.texto).width + 40 * s;
+    caixa(canvas.width / 2 - w / 2, canvas.height - 128 * s, w, 34 * s, 'rgba(8,12,28,0.92)', 8);
+    texto('🎮', canvas.width / 2 - w / 2 + 18 * s, canvas.height - 105 * s, 15, '#fff', 'center', '800');
+    texto(a.texto, canvas.width / 2 + 8 * s, canvas.height - 105 * s, 15, '#ffd60a', 'center', '800');
+    ctx.restore();
+  }
+
   function desenhar() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (state === 'titulo' || !ball) return titulo();
+    if (state === 'titulo' || !ball) { titulo(); avisoComando(); return; }
     if (state === 'replay') {
       placar();
       // Letreiro de repetição, como na TV
@@ -615,6 +637,7 @@ const Hud = (() => {
     // Nos livres e penáltis a câmara está atrás do jogador: o minimapa tapava a jogada
     if (!(state === 'parada' && setPiece && (setPiece.tipo === 'livre' || setPiece.tipo === 'penalti'))) minimapa();
     dicaBolaParada();
+    avisoComando();
     if (state === 'inicio') textoGrande([['PRONTOS?', 52, '#fff']]);
     if (state === 'golo') textoGrande([['GOLO!', 110, '#ffd60a'], [marcador, 30, '#fff'], [EQUIPAS[lastScorer].nome, 20, '#c8d0e0']]);
     if (state === 'fim') {

@@ -14,6 +14,7 @@ function ciclo(agora) {
       if (medida.frames / medida.t < 35) Render.baixarQualidade();
     }
   }
+  Comando.ler(dt);      // os botões do comando entram como teclas
   update(dt);
   Render.desenhar(dt);
   Hud.desenhar();

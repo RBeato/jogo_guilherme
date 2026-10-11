@@ -339,7 +339,14 @@ function direcao(p) {
 
 function shoot(p, power) {
   const deLivre = state === 'parada' && setPiece && setPiece.tipo === 'livre';
-  const f = direcao(p);
+  let f = direcao(p);
+  // R + remate (comando): remate colocado em arco para o poste mais longe
+  const t = human.indexOf(p);
+  if (t >= 0 && down.has(`Pad${t}Colocado`)) {
+    const gx = p.team === 0 ? W : 0;
+    const longe = p.y < H / 2 ? 1 : -1;
+    f = Math.atan2(longe * 0.65, gx > p.x ? 1 : -1);
+  }
   let angle = f, colocado = false, curva = 0;
   const goalX = p.team === 0 ? W : 0;
   const toGoal = Math.atan2(H / 2 - p.y, goalX - p.x);
@@ -645,10 +652,17 @@ function updateHuman(p, t, dt) {
   if (state === 'parada' && setPiece && setPiece.taker === p) {
     p.vx = p.vy = 0;
     if (len) p.facing = p.mira = Math.atan2(dy, dx);
+    const pad = `Pad${t}`;
     if (setPiece.tipo === 'saida') {
-      if (pressed.has(k.b1) || pressed.has(k.b2)) pass(p);
+      if (pressed.has(k.b1) || pressed.has(k.b2) || pressed.has(pad + 'Passe') || pressed.has(pad + 'Alto')) pass(p);
       return;
     }
+    // Comando: B passe rasteiro · Y passe alto/cruzamento (segurar) · X passe em profundidade
+    if (pressed.has(pad + 'Passe')) { pass(p); return; }
+    if (pressed.has(pad + 'Profundidade')) { passeProfundidade(p); return; }
+    if (pressed.has(pad + 'Alto')) cargaAltoPad[t] = 0;
+    if (down.has(pad + 'Alto')) { cargaAltoPad[t] += dt; aPassar[t] = true; cargaPasse[t] = 0.22 + cargaAltoPad[t]; }
+    if (released.has(pad + 'Alto')) { passeAlto(p, Math.min(1, cargaAltoPad[t] / 0.8)); aPassar[t] = false; cargaPasse[t] = 0; return; }
     if (pressed.has(k.b2)) { charging[t] = true; charge[t] = 0; }
     if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 1.1);
     if (released.has(k.b2) && charging[t]) {
@@ -685,6 +699,7 @@ function updateHuman(p, t, dt) {
   }
 
   let speed = (ball.owner === p ? 160 : 175) * (0.86 + atr(p, 'rit') / 100 * 0.25);
+  if (down.has(`Pad${t}Sprint`)) speed *= 1.1;      // ZR: sprint (só no comando)
   speed *= 1 + 0.03 * ps(p, 'Rápido');
   if (p.stun > 0 && !ps(p, 'Incansável')) speed *= 0.6;
   if (len) {
@@ -703,8 +718,11 @@ function updateHuman(p, t, dt) {
     if (p.corrida > 1) psAtivo(p, 'Rápido');
   } else p.corrida = 0;
 
-  // Botão 3: finta
+  // Botão 3: finta (no comando: analógico direito)
   if (pressed.has(k.b3)) fazerFinta(p, dx, dy);
+  const fintaPad = Comando.finta(t);
+  if (fintaPad) fazerFinta(p, fintaPad.dx, fintaPad.dy);
+  controlosComando(p, t, temBola, dt);
   if (p.fintaEspera) {
     p.fintaEspera.t -= dt;
     if (p.fintaEspera.t <= 0) { const e = p.fintaEspera; p.fintaEspera = null; fazerFinta(p, e.dx, e.dy, true); }
@@ -736,6 +754,60 @@ function updateHuman(p, t, dt) {
     }
     aPassar[t] = false; cargaPasse[t] = 0;
   }
+}
+
+// ---------- Ações só do comando (controlos do FC 26) ----------
+const cargaAltoPad = [0, 0];
+function controlosComando(p, t, temBola, dt) {
+  const pad = `Pad${t}`;
+  // B: passe rasteiro; sem bola muda de jogador
+  if (pressed.has(pad + 'Passe')) { if (temBola) pass(p); else switchPlayer(t); }
+  // L: mudar de jogador
+  if (pressed.has(pad + 'Mudar') && ball.owner !== p) switchPlayer(t);
+  // Y: passe alto (segurar = mais longe)
+  if (pressed.has(pad + 'Alto')) cargaAltoPad[t] = 0;
+  if (down.has(pad + 'Alto')) { cargaAltoPad[t] += dt; aPassar[t] = true; cargaPasse[t] = 0.22 + cargaAltoPad[t]; }
+  if (released.has(pad + 'Alto')) {
+    if (canTouchBall(p)) passeAlto(p, Math.min(1, cargaAltoPad[t] / 0.8));
+    aPassar[t] = false; cargaPasse[t] = 0;
+  }
+  // X: passe em profundidade (para o espaço à frente do colega)
+  if (pressed.has(pad + 'Profundidade') && temBola) passeProfundidade(p);
+  // Y sem bola: carrinho (se o adversário tiver a bola)
+  if (pressed.has(pad + 'Carrinho') && ball.owner && ball.owner.team !== p.team && !ball.owner.gk && p.perdeuBola <= 0) {
+    p.slide = 0.35; p.slideDir = p.mira; p.facing = p.slideDir; p.slideDone = false;
+  }
+  // A sem bola: desarme em pé (avança para a bola e tenta tirá-la)
+  if (pressed.has(pad + 'Desarme') && ball.owner && ball.owner.team !== p.team && !ball.owner.gk) {
+    p.desarme = 0.3;
+    p.tentativa = 0;
+    const a = Math.atan2(ball.y - p.y, ball.x - p.x);
+    p.facing = p.mira = a;
+    p.vx = Math.cos(a) * 230; p.vy = Math.sin(a) * 230;
+  }
+}
+
+// Passe em profundidade: para o colega mais à frente, a bola vai para o espaço à frente dele
+function passeProfundidade(p) {
+  const f = direcao(p);
+  let best = null, bestScore = Infinity;
+  for (const m of players) {
+    if (m.team !== p.team || m === p || m.gk) continue;
+    const diff = angDiff(Math.atan2(m.y - p.y, m.x - p.x), f);
+    if (diff > Math.PI * 0.45) continue;
+    const s = diff * 200 - (m.x - p.x) * attackDir(p.team) * 0.5;
+    if (s < bestScore) { bestScore = s; best = m; }
+  }
+  if (!best) return pass(p);
+  const d = dist(p, best);
+  const speed = clamp(d * 1.2 + 170, 260, 500) * (1 + 0.05 * ps(p, 'Passe Incisivo'));
+  const t = d / speed;
+  const frente = 70 + 20 * ps(p, 'Passe Incisivo');
+  const tx = clamp(best.x + best.vx * t + attackDir(p.team) * frente, 10, W - 10);
+  const ty = clamp(best.y + best.vy * t, 10, H - 10);
+  const erro = (0.04 + d / 5000) * (1.7 - atr(p, 'pas') / 100) * (ps(p, 'Passe Incisivo') ? 0.4 : 1);
+  kick(p, Math.atan2(ty - ball.y, tx - ball.x) + (Math.random() - 0.5) * erro, speed, d > 260 ? 80 : 0);
+  psAtivo(p, 'Passe Incisivo');
 }
 
 // ---------- Fintas ----------
@@ -1424,7 +1496,7 @@ function handlePossession() {
         (1 + (atr(p, 'fis') - atr(dono, 'fis')) / 120);
       chance *= 1 - 0.25 * ps(dono, 'Muralha') - 0.12 * ps(dono, 'Resistente à Pressão') - 0.12 * ps(dono, 'Intimidador');
       chance *= 1 + 0.3 * ps(p, 'Muralha') + 0.2 * ps(p, 'Antecipação');
-      chance = clamp(chance * nivelEquipa(p, 'roubo', 1), 0.05, 0.85);
+      chance = clamp(chance * nivelEquipa(p, 'roubo', 1) * (p.desarme > 0 ? 1.6 : 1), 0.05, 0.9);
       const ganhou = ball.owner.holdTime > 0.5 && Math.random() < chance;
       if (!ganhou) psAtivo(dono, ps(dono, 'Muralha') ? 'Muralha' : ps(dono, 'Resistente à Pressão') ? 'Resistente à Pressão' : 'Intimidador');
       if (ganhou) psAtivo(p, ps(p, 'Antecipação') ? 'Antecipação' : 'Muralha');
@@ -1462,6 +1534,7 @@ function goal(team) {
   marcador = t ? (t.team === team ? t.nome : `${t.nome} (autogolo)`) : '';
   if (t && t.team === team) Narrador.golo(t.chamado);
   else Narrador.autogolo(t ? t.chamado : '');
+  Comando.vibrar(team, 1, 600);   // o comando de quem marcou vibra
   score[team]++;
   lastScorer = team;
   kickoffTeam = 1 - team;
@@ -1539,6 +1612,7 @@ function update(dt) {
     p.cabeceou = Math.max(0, p.cabeceou - dt);
     p.psCd = Math.max(0, p.psCd - dt);
     p.finta = Math.max(0, p.finta - dt);
+    p.desarme = Math.max(0, (p.desarme || 0) - dt);
     p.posFinta = Math.max(0, (p.posFinta || 0) - dt);
     p.tentativa = Math.max(0, p.tentativa - dt);
     if (ball.owner === p) p.holdTime += dt;
