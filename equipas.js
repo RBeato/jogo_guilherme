@@ -213,7 +213,7 @@ const TODAS_EQUIPAS = [
       j('Rafael Pinto', 4, 'DC', 79, [74, 45, 66, 66, 80, 80], 'Muralha', 'c e curto 0'),
       j('Diogo Lopes', 3, 'DE', 80, [88, 60, 72, 78, 76, 72], 'Rápido', 'm p curto 0'),
       j('Romeu', 8, 'MC', 85, [74, 78, 90, 84, 70, 72], 'Passe Incisivo', 'c c curto 1'),
-      j('Guilherme', 10, 'PL', 92, [94, 93, 86, 93, 40, 78], 'Remate Potente', 'c c topete 0 #ffd60a'),
+      j('Guilherme.B', 10, 'PL', 99, [99, 99, 95, 99, 45, 90], 'Remate Potente', 'c c topete 0 #ffd60a', 'Guilherme B'),
     ]),
   equipa('GONÇALO FC', 'GON', 'Equipa inventada',
     { camisola: '#38b6ff', calcoes: '#0b1f4d', meias: '#38b6ff', numero: '#ffffff', gola: '#ffffff', gr: '#ff7b00' },
@@ -223,9 +223,18 @@ const TODAS_EQUIPAS = [
       j('Henrique Alves', 4, 'DC', 80, [72, 48, 68, 66, 82, 84], 'Muralha', 't p curto 0'),
       j('Tiago Ramos', 3, 'DE', 80, [87, 58, 74, 79, 77, 73], 'Rápido', 'c c curto 0'),
       j('Simão Ferreira', 8, 'MC', 84, [76, 80, 88, 85, 68, 74], 'Passe Incisivo', 'c l curto 0'),
-      j('Gonçalo', 10, 'PL', 91, [92, 91, 84, 91, 42, 80], 'Remate Colocado', 'c e volume 0 #38b6ff'),
+      j('Gonçalo.B', 10, 'PL', 99, [98, 99, 94, 99, 46, 89], 'Remate Colocado', 'c e volume 0 #38b6ff', 'Gonçalo B'),
     ]),
 ];
+
+// ---------- Cartas especiais coloridas (só estes dois, a pedido do Guilherme) ----------
+const CARTAS_ESPECIAIS = {
+  // Estilo FUTTIES: cor-de-rosa forte e roxo, com confettis coloridos
+  'Guilherme.B': { tipo: 'FUTTIES', cores: ['#ff4fd8', '#e0129a', '#8a1fd1', '#3d0a7a'], texto: '#ffffff', borda: '#ffd1f4',
+    confetti: ['#ffe600', '#00e5ff', '#7dff6a', '#ffffff'] },
+  'Gonçalo.B': { tipo: 'FUTTIES', cores: ['#ff6ad5', '#c2189b', '#6b2bd9', '#24125e'], texto: '#ffffff', borda: '#d9f6ff',
+    confetti: ['#00e5ff', '#ffe600', '#ff9f1c', '#ffffff'] },
+}
 
 // ---------- Mais 6 jogadores por equipa, para o 11 contra 11 ----------
 // Ordem: defesa direito, defesa central, médio, médio, extremo direito, extremo esquerdo.
@@ -378,8 +387,8 @@ const PS_ESPECIAIS = {
   'Ousmane Dembéléi': ['Habilidoso', 'Arranque Rápido', 'Trivela'],
   'Florian Wirtzi': ['Técnico', 'Passe Incisivo', 'Primeiro Toque'],
   'Thibaut Courtoisi': ['Alcance+', 'Corta Cruzamentos', 'Defletor'],
-  'Guilherme': ['Chapéu+', 'Habilidoso', 'Arranque Rápido', 'Trivela'],
-  'Gonçalo': ['Remate Colocado+', 'Arranque Rápido', 'Primeiro Toque', 'Bola Parada'],
+  'Guilherme.B': ['Chapéu+', 'Habilidoso', 'Arranque Rápido', 'Trivela'],
+  'Gonçalo.B': ['Remate Colocado+', 'Arranque Rápido', 'Primeiro Toque', 'Bola Parada'],
 };
 
 // Os outros recebem PlayStyles normais conforme os atributos (como no FC, quem é muito bom numa coisa tem o PlayStyle dessa coisa)

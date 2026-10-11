@@ -291,26 +291,62 @@ const Hud = (() => {
 
   // ---------- Carta dourada ao estilo do FC ----------
   function cartaFC(x, y, w, h, p, mostrarNome = true) {
-    const ouro = ctx.createLinearGradient(x, y, x + w, y + h);
-    ouro.addColorStop(0, '#fff0b3');
-    ouro.addColorStop(0.45, '#e2b04a');
-    ouro.addColorStop(1, '#9c6b12');
+    const especial = CARTAS_ESPECIAIS[p.nome];
+    const fundo = ctx.createLinearGradient(x, y, x + w, y + h);
+    if (especial) especial.cores.forEach((cor, i) => fundo.addColorStop(i / (especial.cores.length - 1), cor));
+    else {
+      fundo.addColorStop(0, '#fff0b3');
+      fundo.addColorStop(0.45, '#e2b04a');
+      fundo.addColorStop(1, '#9c6b12');
+    }
     const c = Math.min(w, h) * 0.18;
+    const forma = () => {
+      ctx.beginPath();
+      ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c);
+      ctx.lineTo(x + w, y + h - c * 0.6); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h - c * 0.6);
+      ctx.lineTo(x, y + c); ctx.closePath();
+    };
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 8 * s;
-    ctx.fillStyle = ouro;
-    ctx.beginPath();
-    ctx.moveTo(x + c, y); ctx.lineTo(x + w - c, y); ctx.lineTo(x + w, y + c);
-    ctx.lineTo(x + w, y + h - c * 0.6); ctx.lineTo(x + w / 2, y + h); ctx.lineTo(x, y + h - c * 0.6);
-    ctx.lineTo(x, y + c); ctx.closePath();
+    ctx.shadowColor = especial ? especial.cores[1] : 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = (especial ? 14 : 8) * s;
+    ctx.fillStyle = fundo;
+    forma();
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = 'rgba(255,248,210,0.9)';
-    ctx.lineWidth = 1.2 * s;
+    if (especial) {
+      ctx.save();
+      forma();
+      ctx.clip();
+      // Confettis (sempre nos mesmos sítios, para não tremerem)
+      let semente = 7;
+      const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
+      for (let i = 0; i < 26; i++) {
+        ctx.fillStyle = especial.confetti[i % especial.confetti.length];
+        ctx.globalAlpha = 0.85;
+        ctx.save();
+        ctx.translate(x + rnd() * w, y + rnd() * h);
+        ctx.rotate(rnd() * Math.PI);
+        ctx.fillRect(-w * 0.025, -w * 0.01, w * 0.05, w * 0.02);
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      // Brilho a passar pela carta, de vez em quando
+      const fase = (performance.now() / 1800) % 1.6 - 0.3;
+      const bx = x + fase * w * 1.6;
+      const brilho = ctx.createLinearGradient(bx - w * 0.3, y, bx + w * 0.3, y + h);
+      brilho.addColorStop(0, 'rgba(255,255,255,0)');
+      brilho.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+      brilho.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = brilho;
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+      forma();
+    }
+    ctx.strokeStyle = especial ? especial.borda : 'rgba(255,248,210,0.9)';
+    ctx.lineWidth = (especial ? 2 : 1.2) * s;
     ctx.stroke();
     const k = w / 50;
-    ctx.fillStyle = '#3a2a05';
+    ctx.fillStyle = especial ? especial.texto : '#3a2a05';
     ctx.textAlign = 'left';
     ctx.font = `900 ${17 * k}px "Segoe UI", system-ui, sans-serif`;
     ctx.fillText(String(p.ovr || 75), x + 6 * k, y + 19 * k);
@@ -319,11 +355,17 @@ const Hud = (() => {
     // Cor da equipa no canto
     ctx.fillStyle = EQUIPAS[p.team].camisola;
     ctx.fillRect(x + w - 15 * k, y + 8 * k, 9 * k, 6 * k);
+    if (especial && mostrarNome) {
+      ctx.fillStyle = '#ffe600';
+      ctx.textAlign = 'center';
+      ctx.font = `900 ${6 * k}px "Segoe UI", system-ui, sans-serif`;
+      ctx.fillText(especial.tipo, x + w / 2, y + h - 3.5 * k);
+    }
     if (mostrarNome) {
-      ctx.fillStyle = '#3a2a05';
+      ctx.fillStyle = especial ? especial.texto : '#3a2a05';
       ctx.textAlign = 'center';
       ctx.font = `800 ${7.5 * k}px "Segoe UI", system-ui, sans-serif`;
-      ctx.fillText(p.chamado.split(' ').slice(-1)[0].toUpperCase(), x + w / 2, y + h - 12 * k, w - 6 * k);
+      ctx.fillText((especial ? p.nome : p.chamado.split(' ').slice(-1)[0]).toUpperCase(), x + w / 2, y + h - 12 * k, w - 6 * k);
     }
   }
 

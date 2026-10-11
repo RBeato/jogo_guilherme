@@ -98,7 +98,9 @@ Guilherme — como nos jogos de futebol antigos sem licença. Cada jogador tem u
 - Seleções: Portugal, França, Brasil, Argentina, Espanha, Inglaterra, Alemanha
 - Clubes portugueses: Benfica, FC Porto, Sporting, SC Braga
 - Clubes europeus: Real Madrid, Barcelona, Manchester City, Bayern, Liverpool, Paris SG
-- Equipas inventadas: Guilherme FC (com o Guilherme e o Romeu) e Gonçalo FC (azul-celeste e branco, com o Gonçalo)
+- Equipas inventadas: Guilherme FC (com o Guilherme.B e o Romeu) e Gonçalo FC (azul-celeste e branco, com o Gonçalo.B).
+  O Guilherme.B e o Gonçalo.B têm 99 e são os únicos com carta especial colorida ao estilo FUTTIES
+  (cor-de-rosa e roxo, com confettis e um brilho a passar)
 
 Se as camisolas forem parecidas, a segunda equipa joga com o equipamento alternativo.
 Os plantéis mudam todas as épocas: alguns jogadores podem já ter mudado de clube.
