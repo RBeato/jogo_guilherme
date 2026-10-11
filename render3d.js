@@ -833,9 +833,37 @@ const Render = (() => {
     }
   }
 
-  // Roleta: o corpo dá uma volta enquanto dura a finta
+  // Animação de cada finta
   function rodarFinta(m, d) {
-    if (d.finta > 0) m.corpo.rotation.y = (1 - d.finta / 0.4) * Math.PI * 2 * (d.fintaLado || 1);
+    if (!(d.finta > 0)) return;
+    const tipo = d.fintaTipo || 'roleta';
+    const prog = 1 - d.finta / (DURACAO_FINTA[tipo] || 0.4);   // 0 → 1
+    const lado = d.fintaLado || 1;
+    if (tipo === 'roleta') {
+      m.corpo.rotation.y = prog * Math.PI * 2 * lado;          // dá uma volta com a bola
+    } else if (tipo === 'elastico') {
+      m.corpo.rotation.x = lado * 0.4 * Math.sin(prog * Math.PI);   // inclina-se para o lado
+      m.ancas[1].rotation.x = -lado * 0.6 * Math.sin(prog * Math.PI);
+    } else if (tipo === 'arrastar') {
+      m.corpo.rotation.z = 0.3;                                 // inclina-se para trás
+      m.ancas[1].rotation.z = 0.9 - prog * 0.6;                 // pé em cima da bola a puxar
+      m.joelhos[1].rotation.z = -0.2;
+    } else if (tipo === 'bicicleta') {
+      // As pernas passam por cima da bola, uma de cada vez
+      m.ancas[0].rotation.x = Math.sin(prog * Math.PI * 4) * 0.6;
+      m.ancas[1].rotation.x = -Math.sin(prog * Math.PI * 4 + 1.5) * 0.6;
+      m.ancas[0].rotation.z = m.ancas[1].rotation.z = 0.3;
+      m.corpo.rotation.x = Math.sin(prog * Math.PI * 4) * 0.12;
+    } else if (tipo === 'lambreta') {
+      // Calcanhar a levantar a bola por trás e por cima da cabeça
+      const k = Math.sin(Math.min(1, prog * 1.6) * Math.PI);
+      m.ancas[1].rotation.z = -0.9 * k;
+      m.joelhos[1].rotation.z = -1.7 * k;
+      m.corpo.rotation.z = -0.2 * k;
+      m.ombros[0].rotation.set(0.5 * k, 0, 0.4); m.ombros[1].rotation.set(-0.5 * k, 0, 0.4);
+    } else if (tipo === 'cueca') {
+      m.ancas[1].rotation.z = 0.8 * Math.sin(prog * Math.PI);   // toque de pé por entre as pernas
+    }
   }
 
   const modelos = new Map();

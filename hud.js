@@ -23,23 +23,32 @@ const Hud = (() => {
     ctx.fill();
   }
 
-  function texto(t, x, y, tam, cor, alinhar = 'left', peso = 'bold') {
+  function texto(t, x, y, tam, cor, alinhar = 'left', peso = 'bold', largura) {
     ctx.font = `${peso} ${tam * s}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = alinhar;
     ctx.fillStyle = cor;
-    ctx.fillText(t, x, y);
+    if (largura) ctx.fillText(t, x, y, largura); else ctx.fillText(t, x, y);
   }
 
   // ---------- Emblemas dourados dos PlayStyles ----------
-  function iconePS(nome, cx, cy, r) {
-    // Fundo dourado em forma de octógono (como os PlayStyle+ do FC)
+  // Nome oficial do PlayStyle no FC (em inglês, como aparece no jogo)
+  const nomeFC = nome => (PLAYSTYLES_FC[nome] ? PLAYSTYLES_FC[nome].en : nome);
+
+  function iconePS(nome, cx, cy, r, plus = true) {
+    // PlayStyle+: dourado com brilho e um "+"; PlayStyle normal: prateado
     const ouro = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
-    ouro.addColorStop(0, '#fff1a8');
-    ouro.addColorStop(0.45, '#e6b422');
-    ouro.addColorStop(1, '#8a5a00');
+    if (plus) {
+      ouro.addColorStop(0, '#fff1a8');
+      ouro.addColorStop(0.45, '#e6b422');
+      ouro.addColorStop(1, '#8a5a00');
+    } else {
+      ouro.addColorStop(0, '#ffffff');
+      ouro.addColorStop(0.5, '#c4ccd8');
+      ouro.addColorStop(1, '#6d7686');
+    }
     ctx.save();
-    ctx.shadowColor = 'rgba(255,200,40,0.7)';
-    ctx.shadowBlur = 12 * s;
+    ctx.shadowColor = plus ? 'rgba(255,200,40,0.7)' : 'rgba(200,215,235,0.4)';
+    ctx.shadowBlur = (plus ? 12 : 5) * s;
     ctx.fillStyle = ouro;
     ctx.beginPath();
     for (let i = 0; i < 8; i++) {
@@ -49,17 +58,27 @@ const Hud = (() => {
     ctx.closePath();
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = '#fff6c8';
+    ctx.strokeStyle = plus ? '#fff6c8' : '#eef2f7';
     ctx.lineWidth = 1.5 * s;
     ctx.stroke();
+    if (plus) {
+      // O "+" dos PlayStyle+
+      ctx.save();
+      ctx.fillStyle = '#2b1d00';
+      ctx.beginPath(); ctx.arc(cx + r * 0.72, cy - r * 0.72, r * 0.34, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffe680';
+      ctx.fillRect(cx + r * 0.72 - r * 0.2, cy - r * 0.72 - r * 0.06, r * 0.4, r * 0.12);
+      ctx.fillRect(cx + r * 0.72 - r * 0.06, cy - r * 0.72 - r * 0.2, r * 0.12, r * 0.4);
+      ctx.restore();
+    }
 
     // Desenho de dentro
     const k = r / 20;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(k, k);
-    ctx.fillStyle = '#2b1d00';
-    ctx.strokeStyle = '#2b1d00';
+    ctx.fillStyle = plus ? '#2b1d00' : '#1c2230';
+    ctx.strokeStyle = plus ? '#2b1d00' : '#1c2230';
     ctx.lineWidth = 2.6;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -104,6 +123,128 @@ const Hud = (() => {
       case 'Reflexos':   // luva
         ctx.roundRect(-8, -2, 16, 14, 4); ctx.fill();
         for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.roundRect(-8 + i * 4.2, -13, 3.4, 12, 1.7); ctx.fill(); }
+        break;
+      case 'Remate Rasteiro':   // bola com seta rasteira
+        ctx.arc(-6, 6, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-12, 12); ctx.lineTo(12, 12); ctx.moveTo(2, 4); ctx.lineTo(12, 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(14, 4); ctx.lineTo(8, 0); ctx.lineTo(8, 8); ctx.closePath(); ctx.fill();
+        break;
+      case 'Chapéu':   // bola em arco por cima de uma barra
+        ctx.moveTo(-12, 8); ctx.quadraticCurveTo(0, -18, 12, 8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -5, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-2, 2, 4, 10);
+        break;
+      case 'Bola Parada':   // bola parada e arco tracejado
+        ctx.arc(-7, 8, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(-2, 4); ctx.quadraticCurveTo(8, -16, 13, -2); ctx.stroke(); ctx.setLineDash([]);
+        break;
+      case 'Trivela':   // seta em curva para fora
+        ctx.moveTo(-12, 10); ctx.bezierCurveTo(-10, -10, 10, -10, 8, 6); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(8, 12); ctx.lineTo(3, 3); ctx.lineTo(13, 4); ctx.closePath(); ctx.fill();
+        break;
+      case 'Acrobático':   // pontapé de bicicleta (círculo com seta)
+        ctx.arc(0, 0, 9, 0.6, Math.PI * 1.8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(9, -5, 3.5, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Cabeceamento Potente': case 'Cabeceamento Preciso':   // cabeça e bola
+        ctx.arc(-4, 2, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(9, -8, 4, 0, Math.PI * 2); ctx.fill();
+        if (nome === 'Cabeceamento Potente') { ctx.beginPath(); ctx.moveTo(6, 2); ctx.lineTo(13, 2); ctx.moveTo(5, 7); ctx.lineTo(12, 9); ctx.stroke(); }
+        else { ctx.beginPath(); ctx.arc(9, -8, 8, 0, Math.PI * 2); ctx.lineWidth = 1.5; ctx.stroke(); }
+        break;
+      case 'Gamechanger':   // estrela
+        for (let i = 0; i < 10; i++) {
+          const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 5 : 12;
+          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+        ctx.closePath(); ctx.fill();
+        break;
+      case 'Passe Tenso':   // duas setas rápidas
+        for (const y of [-5, 5]) {
+          ctx.beginPath(); ctx.moveTo(-12, y); ctx.lineTo(6, y); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(12, y); ctx.lineTo(5, y - 5); ctx.lineTo(5, y + 5); ctx.closePath(); ctx.fill();
+        }
+        break;
+      case 'Passe Longo':   // arco comprido
+        ctx.moveTo(-13, 10); ctx.quadraticCurveTo(0, -20, 13, 10); ctx.stroke();
+        ctx.beginPath(); ctx.arc(13, 10, 3.5, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Tiki-Taka':   // triângulo de passes
+        ctx.moveTo(0, -10); ctx.lineTo(10, 8); ctx.lineTo(-10, 8); ctx.closePath(); ctx.stroke();
+        for (const [x, y] of [[0, -10], [10, 8], [-10, 8]]) { ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill(); }
+        break;
+      case 'Cruzamento Tenso':   // curva a descer para a área
+        ctx.moveTo(-13, -8); ctx.quadraticCurveTo(6, -14, 10, 8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(10, 13); ctx.lineTo(5, 4); ctx.lineTo(14, 4); ctx.closePath(); ctx.fill();
+        break;
+      case 'Inventivo':   // lâmpada
+        ctx.arc(0, -3, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-4, 6, 8, 6);
+        break;
+      case 'Bloqueio':   // mão aberta
+        ctx.roundRect(-7, -4, 14, 14, 3); ctx.fill();
+        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.roundRect(-7 + i * 3.8, -12, 3, 9, 1.5); ctx.fill(); }
+        break;
+      case 'Antecipação':   // olho
+        ctx.moveTo(-13, 0); ctx.quadraticCurveTo(0, -12, 13, 0); ctx.quadraticCurveTo(0, 12, -13, 0); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Marcação':   // duas linhas paralelas (acompanhar)
+        ctx.moveTo(-10, -8); ctx.lineTo(10, -8); ctx.moveTo(-10, 8); ctx.lineTo(10, 8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Fortaleza Aérea':   // torre
+        ctx.fillRect(-6, -6, 12, 18);
+        for (const x of [-8, -2, 4]) ctx.fillRect(x, -12, 4, 6);
+        break;
+      case 'Técnico':   // bola com remoinho
+        ctx.arc(0, 0, 10, 0, Math.PI * 1.5); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Arranque Rápido':   // duas setas em V
+        for (const x of [-7, 3]) { ctx.beginPath(); ctx.moveTo(x, -10); ctx.lineTo(x + 8, 0); ctx.lineTo(x, 10); ctx.stroke(); }
+        break;
+      case 'Primeiro Toque':   // pé e bola
+        ctx.moveTo(-12, 4); ctx.lineTo(0, 4); ctx.lineTo(4, 10); ctx.lineTo(-12, 10); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.arc(7, -5, 5, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Habilidoso': case 'Flair':   // raios de magia
+        ctx.moveTo(0, -12); ctx.lineTo(3, -3); ctx.lineTo(12, 0); ctx.lineTo(3, 3); ctx.lineTo(0, 12);
+        ctx.lineTo(-3, 3); ctx.lineTo(-12, 0); ctx.lineTo(-3, -3); ctx.closePath(); ctx.fill();
+        if (nome === 'Flair') { ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.lineWidth = 1.5; ctx.stroke(); }
+        break;
+      case 'Resistente à Pressão': case 'Intimidador':   // escudo com bola
+        ctx.moveTo(0, -12); ctx.lineTo(10, -7); ctx.lineTo(8, 5); ctx.lineTo(0, 12); ctx.lineTo(-8, 5); ctx.lineTo(-10, -7); ctx.closePath(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Incansável':   // infinito
+        ctx.moveTo(0, 0); ctx.bezierCurveTo(5, -8, 13, -8, 13, 0); ctx.bezierCurveTo(13, 8, 5, 8, 0, 0);
+        ctx.bezierCurveTo(-5, -8, -13, -8, -13, 0); ctx.bezierCurveTo(-13, 8, -5, 8, 0, 0); ctx.stroke();
+        break;
+      case 'Lançamento Longo': case 'Lançamento Longo GR':   // mãos por cima da cabeça e arco
+        ctx.moveTo(-12, 10); ctx.quadraticCurveTo(-2, -16, 12, 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-10, 10, 3.5, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Alcance':   // luva com setas para os lados
+        ctx.roundRect(-5, -5, 10, 11, 3); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(8, -4); ctx.lineTo(8, 4); ctx.closePath(); ctx.fill();
+        break;
+      case 'Corta Cruzamentos':   // luva por cima, bola a cair
+        ctx.roundRect(-6, -2, 12, 12, 3); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, -10, 4, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'Sai aos Pés':   // seta a sair
+        ctx.moveTo(-12, 0); ctx.lineTo(6, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(5, -6); ctx.lineTo(5, 6); ctx.closePath(); ctx.fill();
+        ctx.fillRect(-14, -10, 3, 20);
+        break;
+      case 'Jogo de Pés':   // pé
+        ctx.moveTo(-10, -4); ctx.lineTo(4, -4); ctx.lineTo(10, 6); ctx.lineTo(-10, 6); ctx.closePath(); ctx.fill();
+        break;
+      case 'Defletor':   // bola desviada
+        ctx.moveTo(-12, 10); ctx.lineTo(0, 0); ctx.lineTo(12, 8); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -6, 4, 0, Math.PI * 2); ctx.fill();
         break;
       default:
         ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
@@ -168,7 +309,7 @@ const Hud = (() => {
   function painelJogador(t) {
     const p = human[t];
     if (!p) return;
-    const w = 380 * s, h = 70 * s;
+    const w = 420 * s, h = 70 * s;
     const x = t === 0 ? 16 * s : canvas.width - w - 16 * s;
     const y = canvas.height - h - 16 * s;
     caixa(x, y, w, h, 'rgba(8,12,28,0.9)', 8);
@@ -178,7 +319,7 @@ const Hud = (() => {
     // Carta dourada com a classificação
     cartaFC(x + 14 * s, y + 22 * s, 34 * s, 44 * s, p, false);
     // Nome em destaque (encolhe se for comprido)
-    const zonaNome = w - 60 * s - 92 * s;
+    const zonaNome = w - 60 * s - 140 * s;
     ctx.save();
     ctx.shadowColor = COR_J[t];
     ctx.shadowBlur = 10 * s;
@@ -191,13 +332,18 @@ const Hud = (() => {
     ctx.font = `700 ${11 * s}px "Segoe UI", system-ui, sans-serif`;
     ctx.fillStyle = '#9aa6bf';
     ctx.fillText(`#${p.num} · ${stats}`, x + 60 * s, y + 54 * s, zonaNome);
-    // PlayStyle dourado à direita do nome
-    const ix = x + w - 46 * s;
+    // PlayStyles à direita: o primeiro PlayStyle+ grande, os outros pequenos (dourados ou prateados)
+    const lista = p.pss || [{ nome: p.ps, plus: true }];
+    const ix = x + w - 112 * s;
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
-    ctx.fillRect(ix - 42 * s, y + 6 * s, 1 * s, h - 12 * s);
-    iconePS(p.ps, ix, y + 25 * s, 15 * s);
-    texto(p.ps, ix, y + 55 * s, 10, '#f4c542', 'center', '800');
-    texto('PLAYSTYLE+', ix, y + 65 * s, 7, '#c9a227', 'center', '800');
+    ctx.fillRect(ix - 24 * s, y + 6 * s, 1 * s, h - 12 * s);
+    iconePS(lista[0].nome, ix, y + 26 * s, 15 * s, lista[0].plus);
+    texto(nomeFC(lista[0].nome), ix, y + 56 * s, 9, '#f4c542', 'center', '800', 70 * s);
+    texto(lista[0].plus ? 'PLAYSTYLE+' : 'PLAYSTYLE', ix, y + 66 * s, 7, '#c9a227', 'center', '800');
+    lista.slice(1, 5).forEach((e, i) => {
+      const cx = x + w - 66 * s + (i % 2) * 26 * s, cy = y + 20 * s + Math.floor(i / 2) * 28 * s;
+      iconePS(e.nome, cx, cy, 10 * s, e.plus);
+    });
   }
 
   // Emblema dourado por cima do jogador quando o PlayStyle entra em ação (como no FC)
@@ -206,15 +352,27 @@ const Hud = (() => {
       if (!players.includes(pp.p)) continue;
       const c = Render.noEcra(pp.p.x, pp.p.y, 40, canvas.width, canvas.height);
       if (!c.visivel) continue;
-      const vida = 1.6 - pp.t;                     // 0 → 1.6
+      const vida = (pp.finta ? 1.2 : 1.6) - pp.t;
       const escala = Math.min(1, vida / 0.15) * (1 + Math.max(0, 0.15 - vida) * 2);
       const alfa = Math.min(1, pp.t / 0.4);
       ctx.save();
       ctx.globalAlpha = alfa;
-      const yy = c.y - 10 * s - vida * 14 * s;
-      iconePS(pp.ps, c.x, yy, 17 * s * escala);
-      caixa(c.x - 52 * s, yy + 22 * s, 104 * s, 18 * s, 'rgba(20,14,0,0.85)', 9);
-      texto(pp.ps.toUpperCase(), c.x, yy + 35 * s, 10, '#f4c542', 'center', '900');
+      if (pp.finta) {
+        // Nome da finta (ex.: LAMBRETA!)
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 8 * s;
+        texto(pp.finta, c.x, c.y - 18 * s - vida * 18 * s, 18 * escala, '#ffffff', 'center', '900');
+        ctx.restore();
+      } else {
+        const yy = c.y - 10 * s - vida * 14 * s;
+        iconePS(pp.ps, c.x, yy, 17 * s * escala, pp.plus !== false);
+        const nome = nomeFC(pp.ps).toUpperCase() + (pp.plus !== false ? '+' : '');
+        ctx.font = `900 ${10 * s}px "Segoe UI", system-ui, sans-serif`;
+        const lw = ctx.measureText(nome).width + 16 * s;
+        caixa(c.x - lw / 2, yy + 22 * s, lw, 18 * s, 'rgba(20,14,0,0.85)', 9);
+        texto(nome, c.x, yy + 35 * s, 10, pp.plus !== false ? '#f4c542' : '#dfe6f0', 'center', '900');
+      }
       ctx.restore();
     }
   }
@@ -371,7 +529,8 @@ const Hud = (() => {
     texto('com bola: rematar (segura = força)', x + 66 * s, y + 154 * s, 14, '#fff', 'left', '700');
     texto('sem bola: carrinho', x + 66 * s, y + 170 * s, 12, '#9aa6bf', 'left', '600');
     tecla(x + 20 * s, y + 184 * s, nome(k.b3), '#111');
-    texto('com bola: finta (roleta)', x + 66 * s, y + 204 * s, 14, '#fff', 'left', '700');
+    texto('fintas: ↑ lambreta · ← → elástico · ↓ arrastar', x + 66 * s, y + 198 * s, 12, '#fff', 'left', '700');
+    texto('sozinho: roleta · 2× bicicleta (2× + ↑ cueca)', x + 66 * s, y + 214 * s, 11, '#9aa6bf', 'left', '600');
   }
 
   function titulo() {

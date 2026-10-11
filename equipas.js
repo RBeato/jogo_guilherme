@@ -292,3 +292,126 @@ const EXTRA_11 = {
     x('Santiago Reis', 11, 'ED', 81, 'e p curto 0'), x('Duarte Faria', 9, 'EE', 81, 'c c topete 0')],
 };
 for (const eq of TODAS_EQUIPAS) eq.plantel11 = eq.plantel.concat(EXTRA_11[eq.nome] || []);
+
+// ---------- PlayStyles ao estilo do FC 26 ----------
+// Cada jogador tem 1 ou 2 PlayStyle+ (dourados, mais fortes) e alguns PlayStyles normais (prateados).
+// Entre parênteses: o nome em inglês, como aparece no FC.
+const PLAYSTYLES_FC = {
+  // Remate
+  'Remate Colocado': { en: 'Finesse Shot', grupo: 'Remate', faz: 'Remate em arco para o canto' },
+  'Remate Potente': { en: 'Power Shot', grupo: 'Remate', faz: 'Remates mais fortes e certeiros' },
+  'Remate Rasteiro': { en: 'Low Driven Shot', grupo: 'Remate', faz: 'Remates rasteiros que não vão por cima' },
+  'Chapéu': { en: 'Chip Shot', grupo: 'Remate', faz: 'Remata por cima do GR quando ele sai' },
+  'Bola Parada': { en: 'Dead Ball', grupo: 'Remate', faz: 'Livres mais certeiros, menos bolas na barreira' },
+  'Trivela': { en: 'Trivela', grupo: 'Remate', faz: 'Remate com a parte de fora do pé, com mais curva' },
+  'Acrobático': { en: 'Acrobatic', grupo: 'Remate', faz: 'Cabeceamentos e remates difíceis mais certeiros' },
+  'Cabeceamento Potente': { en: 'Power Header', grupo: 'Remate', faz: 'Cabeceamentos muito fortes' },
+  'Cabeceamento Preciso': { en: 'Precision Header', grupo: 'Remate', faz: 'Cabeceamentos para os cantos da baliza' },
+  'Gamechanger': { en: 'Gamechanger', grupo: 'Remate', faz: 'Remates com efeito especial, difíceis para o GR' },
+  // Passe
+  'Passe Incisivo': { en: 'Incisive Pass', grupo: 'Passe', faz: 'Passe em profundidade para o espaço' },
+  'Passe Tenso': { en: 'Pinged Pass', grupo: 'Passe', faz: 'Passes rasteiros mais rápidos' },
+  'Passe Longo': { en: 'Long Ball Pass', grupo: 'Passe', faz: 'Passes altos e longos mais certeiros' },
+  'Tiki-Taka': { en: 'Tiki Taka', grupo: 'Passe', faz: 'Passes curtos rápidos e certeiros' },
+  'Cruzamento Tenso': { en: 'Whipped Pass', grupo: 'Passe', faz: 'Cruzamentos mais rápidos e baixos' },
+  'Inventivo': { en: 'Inventive', grupo: 'Passe', faz: 'Passes difíceis muito certeiros' },
+  // Defesa
+  'Intercetor': { en: 'Intercept', grupo: 'Defesa', faz: 'Lê e corta os passes' },
+  'Bloqueio': { en: 'Block', grupo: 'Defesa', faz: 'Bloqueia mais remates com o corpo' },
+  'Antecipação': { en: 'Anticipate', grupo: 'Defesa', faz: 'Rouba mais vezes a bola encostando' },
+  'Carrinho': { en: 'Slide Tackle', grupo: 'Defesa', faz: 'Carrinhos mais longos e com menos cartões' },
+  'Marcação': { en: 'Jockey', grupo: 'Defesa', faz: 'Difícil de enganar com fintas' },
+  'Fortaleza Aérea': { en: 'Aerial Fortress', grupo: 'Defesa', faz: 'Ganha os lances pelo ar' },
+  'Muralha': { en: 'Bruiser', grupo: 'Físico', faz: 'Ganha os duelos de ombro' },
+  // Controlo
+  'Técnico': { en: 'Technical', grupo: 'Controlo', faz: 'Vira-se mais depressa com a bola' },
+  'Rápido': { en: 'Rapid', grupo: 'Controlo', faz: 'Corre mais depressa' },
+  'Arranque Rápido': { en: 'Quick Step', grupo: 'Controlo', faz: 'Acelera mais depressa' },
+  'Primeiro Toque': { en: 'First Touch', grupo: 'Controlo', faz: 'Domina bolas rápidas' },
+  'Habilidoso': { en: 'Trickster', grupo: 'Controlo', faz: 'Fintas que enganam mais' },
+  'Flair': { en: 'Flair', grupo: 'Controlo', faz: 'Depois de uma finta, remata e passa melhor' },
+  'Resistente à Pressão': { en: 'Press Proven', grupo: 'Controlo', faz: 'Difícil de lhe tirar a bola quando é pressionado' },
+  'Intimidador': { en: 'Enforcer', grupo: 'Físico', faz: 'Protege a bola com o corpo' },
+  'Incansável': { en: 'Relentless', grupo: 'Físico', faz: 'Não fica lento depois de perder a bola' },
+  'Lançamento Longo': { en: 'Long Throw', grupo: 'Físico', faz: 'Lançamentos laterais mais longos' },
+  // Guarda-redes
+  'Reflexos': { en: 'Quick Reflexes', grupo: 'Guarda-redes', faz: 'Defende mais e mergulha mais depressa' },
+  'Alcance': { en: 'Far Reach', grupo: 'Guarda-redes', faz: 'Mergulha mais longe' },
+  'Corta Cruzamentos': { en: 'Cross Claimer', grupo: 'Guarda-redes', faz: 'Agarra os cruzamentos' },
+  'Sai aos Pés': { en: 'Rush Out', grupo: 'Guarda-redes', faz: 'Sai da baliza para apanhar a bola' },
+  'Lançamento Longo GR': { en: 'Far Throw', grupo: 'Guarda-redes', faz: 'Repõe a bola mais longe' },
+  'Jogo de Pés': { en: 'Footwork', grupo: 'Guarda-redes', faz: 'Defende melhor os remates rasteiros' },
+  'Defletor': { en: 'Deflector', grupo: 'Guarda-redes', faz: 'Desvia as bolas para longe da área' },
+};
+
+// PlayStyles escolhidos à mão para os jogadores mais conhecidos ("+" = PlayStyle+ dourado)
+const PS_ESPECIAIS = {
+  'Cristiano Ronaldoi': ['Cabeceamento Potente+', 'Acrobático', 'Bola Parada', 'Cabeceamento Preciso'],
+  'Lionel Messii': ['Bola Parada+', 'Inventivo', 'Técnico', 'Flair'],
+  'Kylian Mbappéi': ['Rápido+', 'Arranque Rápido', 'Gamechanger', 'Flair'],
+  'Bruno Fernandesi': ['Bola Parada', 'Passe Longo', 'Remate Potente'],
+  'Erling Haalandi': ['Acrobático', 'Arranque Rápido', 'Remate Rasteiro'],
+  'Lamine Yamali': ['Trivela+', 'Técnico', 'Habilidoso'],
+  'Pedrii': ['Tiki-Taka+', 'Técnico', 'Primeiro Toque'],
+  'Virgil van Dijki': ['Fortaleza Aérea+', 'Antecipação', 'Passe Longo'],
+  'Trent Alexander-Arnoldi': ['Cruzamento Tenso', 'Bola Parada', 'Tiki-Taka'],
+  'Joshua Kimmichi': ['Cruzamento Tenso', 'Passe Longo', 'Bola Parada'],
+  'Mohamed Salahi': ['Trivela', 'Arranque Rápido', 'Chapéu'],
+  'Vinícius Júniori': ['Habilidoso+', 'Arranque Rápido', 'Flair'],
+  'Harry Kanei': ['Passe Longo', 'Remate Rasteiro', 'Cabeceamento Potente'],
+  'Rodrii': ['Tiki-Taka', 'Passe Longo', 'Antecipação'],
+  'Jude Bellinghami': ['Cabeceamento Potente', 'Muralha', 'Primeiro Toque'],
+  'Rúben Diasi': ['Bloqueio', 'Fortaleza Aérea', 'Antecipação'],
+  'Ousmane Dembéléi': ['Habilidoso', 'Arranque Rápido', 'Trivela'],
+  'Florian Wirtzi': ['Técnico', 'Passe Incisivo', 'Primeiro Toque'],
+  'Thibaut Courtoisi': ['Alcance+', 'Corta Cruzamentos', 'Defletor'],
+  'Guilherme': ['Chapéu+', 'Habilidoso', 'Arranque Rápido', 'Trivela'],
+};
+
+// Os outros recebem PlayStyles normais conforme os atributos (como no FC, quem é muito bom numa coisa tem o PlayStyle dessa coisa)
+function playstylesPorAtributos(j) {
+  const a = j.at, lista = [];
+  if (j.posicao === 'GR') {
+    if (a.ref >= 88) lista.push('Alcance');
+    if (a.ref >= 84) lista.push('Corta Cruzamentos');
+    if (j.ovr >= 86) lista.push('Sai aos Pés');
+    if (j.ovr >= 83) lista.push('Jogo de Pés');
+    lista.push('Lançamento Longo GR');
+    return lista;
+  }
+  if (a.rit >= 90) lista.push('Arranque Rápido');
+  if (a.rit >= 93) lista.push('Rápido');
+  if (a.rem >= 88) lista.push('Remate Potente');
+  else if (a.rem >= 84) lista.push('Remate Colocado');
+  if (a.pas >= 88) lista.push('Tiki-Taka');
+  else if (a.pas >= 84) lista.push('Passe Tenso');
+  if (a.dri >= 91) lista.push('Habilidoso');
+  if (a.dri >= 88) lista.push('Técnico');
+  else if (a.dri >= 85) lista.push('Primeiro Toque');
+  if (a.def >= 86) lista.push('Antecipação');
+  else if (a.def >= 83) lista.push('Bloqueio');
+  if (a.fis >= 86) lista.push('Fortaleza Aérea');
+  if ((j.posicao === 'DD' || j.posicao === 'DE') && a.rit >= 84) lista.push('Cruzamento Tenso');
+  if (a.fis >= 84 && a.rit >= 80) lista.push('Incansável');
+  if (a.dri >= 86 && a.fis >= 80) lista.push('Resistente à Pressão');
+  if (a.fis >= 84 && a.def < 60) lista.push('Intimidador');
+  if (a.rem >= 88 && a.dri >= 88) lista.push('Gamechanger');
+  return lista;
+}
+
+// Junta tudo: pss = [{ nome, plus }]. O PlayStyle principal de cada jogador é sempre PlayStyle+.
+for (const eq of TODAS_EQUIPAS) {
+  for (const j of eq.plantel11) {
+    if (j.pss) continue;   // o mesmo jogador pode estar em duas equipas (seleção e clube)
+    const pss = [{ nome: j.ps, plus: true }];
+    const extra = PS_ESPECIAIS[j.nome] || playstylesPorAtributos(j);
+    for (const e of extra) {
+      const plus = e.endsWith('+');
+      const nome = plus ? e.slice(0, -1) : e;
+      if (pss.some(x => x.nome === nome) || pss.length >= 5) continue;
+      pss.push({ nome, plus: plus && pss.filter(x => x.plus).length < 2 });
+    }
+    // Primeiro os dourados, depois os prateados
+    j.pss = pss.sort((a, b) => b.plus - a.plus);
+  }
+}
