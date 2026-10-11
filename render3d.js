@@ -879,7 +879,7 @@ const Render = (() => {
       const b = v.bola;
       if (d.slide > 0 || d.chao > 0) pose = 'carrinho';
       else if (d.mergulho > 0) pose = 'mergulho';
-      else if (!v.replay && (state === 'golo' || state === 'fim') && p.team === lastScorer) pose = 'festa';
+      else if (!v.replay && (state === 'golo' ? p.team === lastScorer : state === 'fim' && p.team === vencedor)) pose = 'festa';
       else if (d.cabeceou > 0) pose = 'cabeca';
       else if (d.cooldown > 0.2) pose = 'chuto';
       else if (p.gk && (p.team === 0 ? b.x < 330 : b.x > W - 330) && Math.hypot(d.vx, d.vy) < 90 &&
@@ -938,6 +938,44 @@ const Render = (() => {
   setaMesh.position.y = 0.5;
   setaMira.add(setaMesh);
   scene.add(setaMira);
+
+  // Seta curva do livre direto: uma linha amarela no ar a mostrar o caminho (por cima da barreira
+  // e com o efeito) e a sombra dela no chão, para se perceber a altura
+  const N_PONTOS = 60;
+  const matCurva = new THREE.MeshBasicMaterial({ color: '#ffd60a', transparent: true, opacity: 0.9 });
+  let curvaMesh = null, curvaChave = '';
+  const pontosChao = new THREE.InstancedMesh(new THREE.CircleGeometry(1.6, 10),
+    new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.35, depthWrite: false }), N_PONTOS);
+  pontosChao.frustumCulled = false;
+  scene.add(pontosChao);
+  const matPonto = new THREE.Matrix4(), rotChao = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
+
+  function desenharCurvaLivre(mostrar) {
+    pontosChao.visible = mostrar;
+    if (curvaMesh) curvaMesh.visible = mostrar;
+    if (!mostrar) return;
+    const p = setPiece.taker;
+    const tj = human.indexOf(p);
+    const power = tj >= 0 && charging[tj] ? charge[tj] : 0.55;
+    const chave = `${ball.x.toFixed(1)},${ball.y.toFixed(1)},${p.mira.toFixed(3)},${setPiece.efeito},${power.toFixed(2)}`;
+    if (chave === curvaChave) return;
+    curvaChave = chave;
+    // Só mostra o início do caminho (passar a barreira e começar a curvar): o resto adivinha-se
+    const pts = trajetoriaLivre(p, power);
+    const usar = pts.slice(0, Math.max(4, Math.ceil(pts.length * 0.7)));
+    const curva = new THREE.CatmullRomCurve3(usar.map(q => new THREE.Vector3(X(q.x), q.z + RB, Z(q.y))));
+    if (curvaMesh) { scene.remove(curvaMesh); curvaMesh.geometry.dispose(); }
+    curvaMesh = new THREE.Mesh(new THREE.TubeGeometry(curva, 48, 0.9, 6, false), matCurva);
+    scene.add(curvaMesh);
+    const passo = Math.max(1, Math.floor(usar.length / N_PONTOS) + 1);
+    let n = 0;
+    for (let i = 0; i < usar.length && n < N_PONTOS; i += passo) {
+      matPonto.makeTranslation(X(usar[i].x), 0.4, Z(usar[i].y)).multiply(rotChao);
+      pontosChao.setMatrixAt(n++, matPonto);
+    }
+    pontosChao.count = n;
+    pontosChao.instanceMatrix.needsUpdate = true;
+  }
 
   // ---------- Bola ----------
   const RB = 3.2;
@@ -1198,7 +1236,10 @@ const Render = (() => {
       }
     });
     const sp = state === 'parada' && setPiece && setPiece.taker;
-    setaMira.visible = !!(emJogo && sp && !setPiece.taker.gk);
+    const curvaLivre = !!(emJogo && sp && livreDiretoPossivel() && human.indexOf(setPiece.taker) >= 0 &&
+      !eCPU(human.indexOf(setPiece.taker)));
+    desenharCurvaLivre(curvaLivre);
+    setaMira.visible = !!(emJogo && sp && !setPiece.taker.gk && !curvaLivre);
     if (setaMira.visible) {
       setaMira.position.set(X(ball.x), 0, Z(ball.y));
       setaMira.rotation.y = -setPiece.taker.facing;

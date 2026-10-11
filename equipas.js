@@ -215,6 +215,16 @@ const TODAS_EQUIPAS = [
       j('Romeu', 8, 'MC', 85, [74, 78, 90, 84, 70, 72], 'Passe Incisivo', 'c c curto 1'),
       j('Guilherme', 10, 'PL', 92, [94, 93, 86, 93, 40, 78], 'Remate Potente', 'c c topete 0 #ffd60a'),
     ]),
+  equipa('GONÇALO FC', 'GON', 'Equipa inventada',
+    { camisola: '#38b6ff', calcoes: '#0b1f4d', meias: '#38b6ff', numero: '#ffffff', gola: '#ffffff', gr: '#ff7b00' },
+    { camisola: '#ffffff', calcoes: '#ffffff', meias: '#ffffff', numero: '#38b6ff', gola: '#0b1f4d' },
+    { tipo: 'h', cores: ['#38b6ff', '#ffffff', '#38b6ff'] }, [
+      j('Vasco Moreira', 1, 'GR', 81, 83, 'Reflexos', 'c e curto 0'),
+      j('Henrique Alves', 4, 'DC', 80, [72, 48, 68, 66, 82, 84], 'Muralha', 't p curto 0'),
+      j('Tiago Ramos', 3, 'DE', 80, [87, 58, 74, 79, 77, 73], 'Rápido', 'c c curto 0'),
+      j('Simão Ferreira', 8, 'MC', 84, [76, 80, 88, 85, 68, 74], 'Passe Incisivo', 'c l curto 0'),
+      j('Gonçalo', 10, 'PL', 91, [92, 91, 84, 91, 42, 80], 'Remate Colocado', 'c e volume 0 #38b6ff'),
+    ]),
 ];
 
 // ---------- Mais 6 jogadores por equipa, para o 11 contra 11 ----------
@@ -290,6 +300,9 @@ const EXTRA_11 = {
   'GUILHERME FC': [x('Afonso Matos', 2, 'DD', 79, 'c c curto 0'), x('Pedro Gomes', 5, 'DC', 79, 'c e curto 0'),
     x('Martim Sousa', 6, 'MC', 80, 'c l curto 0'), x('Lourenço Costa', 7, 'MC', 80, 'm p curto 0'),
     x('Santiago Reis', 11, 'ED', 81, 'e p curto 0'), x('Duarte Faria', 9, 'EE', 81, 'c c topete 0')],
+  'GONÇALO FC': [x('Bernardo Lima', 2, 'DD', 79, 'c c curto 0'), x('Miguel Santos', 5, 'DC', 79, 't e curto 0'),
+    x('Rodrigo Pires', 6, 'MC', 80, 'c e curto 0'), x('Francisco Melo', 7, 'MC', 80, 'c l curto 0'),
+    x('Gabriel Nunes', 11, 'ED', 81, 'm p curto 0'), x('Leonardo Cruz', 9, 'EE', 81, 'c c topete 0')],
 };
 for (const eq of TODAS_EQUIPAS) eq.plantel11 = eq.plantel.concat(EXTRA_11[eq.nome] || []);
 
@@ -366,6 +379,7 @@ const PS_ESPECIAIS = {
   'Florian Wirtzi': ['Técnico', 'Passe Incisivo', 'Primeiro Toque'],
   'Thibaut Courtoisi': ['Alcance+', 'Corta Cruzamentos', 'Defletor'],
   'Guilherme': ['Chapéu+', 'Habilidoso', 'Arranque Rápido', 'Trivela'],
+  'Gonçalo': ['Remate Colocado+', 'Arranque Rápido', 'Primeiro Toque', 'Bola Parada'],
 };
 
 // Os outros recebem PlayStyles normais conforme os atributos (como no FC, quem é muito bom numa coisa tem o PlayStyle dessa coisa)

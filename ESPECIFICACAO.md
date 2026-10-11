@@ -54,6 +54,10 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - Nos **livres e penáltis** a câmara fica **atrás de quem bate**, a olhar para a baliza.
   Nos livres perto da área há **barreira** de 3 jogadores: a bola tem de passar por cima
   (às vezes bate na barreira; com força a mais vai por cima da trave).
+- **Livre direto com efeito:** quem bate escolhe o efeito com o botão de fintas (H / Ç) ou com o
+  analógico direito: sem efeito → curva para a direita → curva para a esquerda. Uma **linha amarela
+  curva** mostra o início do caminho da bola, por cima da barreira, e a sombra dela no chão.
+  A linha muda com a força que se está a carregar. Só mostra 70% do caminho: o fim adivinha-se.
 - Fintas: ainda por decidir como fazer sem acrescentar teclas.
 
 ## 3. Câmara e visual
@@ -90,11 +94,11 @@ Nomes reais e cores das camisolas (sem emblemas oficiais nem fotografias):
 Os jogadores têm o nome com **um "i" no fim do apelido** (ex.: Cristiano Ronaldoi), decisão do
 Guilherme — como nos jogos de futebol antigos sem licença. Cada jogador tem um PlayStyle.
 
-**18 equipas** (5 jogadores cada), escolhidas no ecrã inicial — J1 com **W/S**, J2 com **↑/↓**:
+**19 equipas** (5 jogadores cada), escolhidas no ecrã inicial — J1 com **W/S**, J2 com **↑/↓**:
 - Seleções: Portugal, França, Brasil, Argentina, Espanha, Inglaterra, Alemanha
 - Clubes portugueses: Benfica, FC Porto, Sporting, SC Braga
 - Clubes europeus: Real Madrid, Barcelona, Manchester City, Bayern, Liverpool, Paris SG
-- Equipa inventada: Guilherme FC (com o Guilherme e o Romeu)
+- Equipas inventadas: Guilherme FC (com o Guilherme e o Romeu) e Gonçalo FC (azul-celeste e branco, com o Gonçalo)
 
 Se as camisolas forem parecidas, a segunda equipa joga com o equipamento alternativo.
 Os plantéis mudam todas as épocas: alguns jogadores podem já ter mudado de clube.
@@ -112,7 +116,13 @@ São inspirados nos verdadeiros (cores das cadeiras, telhado, dia/noite), não s
 
 ## 5. Regras
 
-- Ganha quem chegar primeiro ao número de golos escolhido.
+- O jogo dura **no máximo 2 minutos** (o relógio fica vermelho nos últimos 10 segundos).
+  Acaba antes se alguém chegar a 5 golos. Quando o tempo acaba, o árbitro ainda espera
+  por um remate que vai a caminho da baliza ou por um penálti marcado.
+- **Empate no fim dos 2 minutos → penáltis:** 5 para cada equipa (batem os melhores primeiro);
+  se continuar empatado, morte súbita. Os outros jogadores ficam no círculo central.
+  Acaba logo que uma equipa já não consiga apanhar a outra. Bolinhas no placar:
+  verde = golo, vermelho = falhou.
 - **Faltas e cartões** (carrinho por trás ou falhado = falta; amarelo / vermelho)
 - **Cantos e lançamentos laterais**
 - **Fora de jogo** (pode ser desligado no menu)

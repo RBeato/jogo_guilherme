@@ -264,7 +264,29 @@ const Hud = (() => {
     texto(eq[1].curto, x + 182 * s, y + 23 * s, 17, '#fff');
     ctx.fillStyle = eq[1].camisola; ctx.fillRect(x + 238 * s, y + 7 * s, 5 * s, h - 14 * s);
     caixa(x, y + h + 3 * s, 250 * s, 20 * s, 'rgba(8,12,28,0.75)');
-    texto(`Primeiro a ${GOLS_PARA_GANHAR} golos ganha`, x + 125 * s, y + h + 17 * s, 12, '#c8d0e0', 'center', '600');
+    if (desempate) { bolinhasPenaltis(x, y + h + 13 * s); return; }
+    const seg = Math.ceil(tempoRestante);
+    const relogioTxt = `${Math.floor(seg / 60)}:${String(seg % 60).padStart(2, '0')}`;
+    // Nos últimos 10 segundos o relógio fica vermelho
+    texto(relogioTxt, x + 10 * s, y + h + 18 * s, 14, seg <= 10 ? '#ff4d4d' : '#ffffff', 'left', '800');
+    texto(`ou primeiro a ${GOLS_PARA_GANHAR} golos`, x + 150 * s, y + h + 17 * s, 12, '#c8d0e0', 'center', '600');
+  }
+
+  // Desempate: uma bolinha por penálti (verde = golo, vermelho = falhou, vazio = ainda não bateu)
+  function bolinhasPenaltis(x, cy) {
+    const d = desempate;
+    const total = Math.max(PENALTIS_CADA, d.batidos[0], d.batidos[1]);
+    const ini = Math.max(0, total - PENALTIS_CADA);   // na morte súbita mostra os últimos 5
+    for (let t = 0; t < 2; t++) {
+      for (let i = 0; i < PENALTIS_CADA; i++) {
+        const r = d.hist[t][ini + i];
+        const cx = t === 0 ? x + (12 + i * 12) * s : x + (238 - i * 12) * s;
+        ctx.beginPath(); ctx.arc(cx, cy, 4.2 * s, 0, Math.PI * 2);
+        if (r === undefined) { ctx.strokeStyle = '#8a93a8'; ctx.lineWidth = 1.5 * s; ctx.stroke(); }
+        else { ctx.fillStyle = r ? '#2ecc71' : '#ef233c'; ctx.fill(); }
+      }
+    }
+    texto(`PENÁLTIS ${d.golos[0]}-${d.golos[1]}`, x + 125 * s, cy + 4.5 * s, 12, '#ffd60a', 'center', '800');
   }
 
   // ---------- Carta dourada ao estilo do FC ----------
@@ -465,6 +487,12 @@ const Hud = (() => {
     // Dica em cima (por baixo do aviso do árbitro), para não tapar a jogada
     caixa(canvas.width / 2 - 200 * s, 164 * s, 400 * s, 30 * s, 'rgba(8,12,28,0.8)', 6);
     texto(`J${t + 1}: ${k}`, canvas.width / 2, 184 * s, 14, COR_J[t], 'center', '700');
+    if (livreDiretoPossivel()) {
+      const botao = t === 0 ? 'H' : 'Ç';
+      caixa(canvas.width / 2 - 200 * s, 198 * s, 400 * s, 28 * s, 'rgba(8,12,28,0.8)', 6);
+      texto(`${botao} (ou analógico direito) muda o efeito: ${NOMES_EFEITO[setPiece.efeito || 0].toUpperCase()}`,
+        canvas.width / 2, 217 * s, 13, '#ffd60a', 'center', '800');
+    }
   }
 
   function textoGrande(linhas) {
@@ -545,7 +573,7 @@ const Hud = (() => {
     ctx.shadowBlur = 24 * s;
     texto('FUTEBOL 26', canvas.width / 2, canvas.height * 0.2, 84, '#ffffff', 'center', '900');
     ctx.restore();
-    texto(`${EQUIPAS[0].nome}  vs  ${EQUIPAS[1].nome}  ·  ${modoJogo === 'cpu' ? 'contra o computador' : '2 jogadores'}  ·  ${numJogadores} contra ${numJogadores}  ·  primeiro a ${GOLS_PARA_GANHAR} golos`,
+    texto(`${EQUIPAS[0].nome}  vs  ${EQUIPAS[1].nome}  ·  ${modoJogo === 'cpu' ? 'contra o computador' : '2 jogadores'}  ·  ${numJogadores} contra ${numJogadores}  ·  2 minutos ou primeiro a ${GOLS_PARA_GANHAR} golos`,
       canvas.width / 2, canvas.height * 0.2 + 42 * s, 17, '#9fe0a6', 'center', '700');
     // Escolha do estádio
     const est = Render.estadio;
@@ -641,7 +669,8 @@ const Hud = (() => {
     if (state === 'inicio') textoGrande([['PRONTOS?', 52, '#fff']]);
     if (state === 'golo') textoGrande([['GOLO!', 110, '#ffd60a'], [marcador, 30, '#fff'], [EQUIPAS[lastScorer].nome, 20, '#c8d0e0']]);
     if (state === 'fim') {
-      const l = [[`${EQUIPAS[lastScorer].nome} GANHA!`, 66, '#ffd60a'], [`${score[0]} - ${score[1]}`, 44, '#fff']];
+      const l = [[`${EQUIPAS[vencedor].nome} GANHA!`, 66, '#ffd60a'], [`${score[0]} - ${score[1]}`, 44, '#fff']];
+      if (desempate) l.push([`${desempate.golos[0]} - ${desempate.golos[1]} nos penáltis`, 26, '#ffd60a']);
       if (stateTimer < 0) l.push(['Carrega ESPAÇO para voltar ao início', 20, '#c8d0e0']);
       textoGrande(l);
     }

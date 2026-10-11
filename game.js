@@ -13,6 +13,8 @@ const GRAVIDADE = 900;
 // Velocidade de todos os jogadores (1 = a antiga). O Guilherme pediu que corressem mais devagar.
 const RITMO = 0.8;
 const GOLS_PARA_GANHAR = 5;
+const TEMPO_JOGO = 120;          // o jogo dura no máximo 2 minutos; empatado → penáltis
+const PENALTIS_CADA = 5;          // penáltis para cada equipa no desempate (depois: morte súbita)
 
 // ---------- Teclas ----------
 // Só 2 botões por jogador. O que fazem depende de teres a bola:
@@ -152,6 +154,9 @@ let kickoffTeam = 0;
 let lastScorer = -1;
 let marcador = '';              // nome de quem marcou o último golo
 let fimDepois = false;         // o último golo acabou o jogo
+let tempoRestante = TEMPO_JOGO; // segundos que faltam
+let desempate = null;          // desempate por penáltis (null = jogo normal)
+let vencedor = 0;              // equipa que ganhou o jogo
 const arbitros = [];           // árbitro e dois fiscais de linha
 const GRAVACAO = [];           // últimos segundos de jogo, para a repetição
 const replay = { i: 0, t: 0 };
@@ -270,6 +275,8 @@ function frontPlayer(team) {
 
 function newGame() {
   score = [0, 0];
+  tempoRestante = TEMPO_JOGO;
+  desempate = null;
   kickoffTeam = 0;
   createPlayers();
   criarArbitros();
@@ -339,6 +346,53 @@ function direcao(p) {
   return human.includes(p) ? p.mira : p.facing;
 }
 
+function velocidadeRemate(p, power) {
+  // Força do remate (o Guilherme achou que estava forte demais: o máximo passou de ~1000 para ~650)
+  let v = (300 + power * 330) * (1 + 0.05 * ps(p, 'Remate Potente')) * (0.9 + atr(p, 'rem') / 100 * 0.12);
+  // Distância à baliza: de longe a bola chega fraca (ou nem chega); de perto, força a mais pode ir por cima
+  const goalX = p.team === 0 ? W : 0;
+  const dBaliza = Math.hypot(goalX - ball.x, H / 2 - ball.y);
+  return v * clamp(1.1 - Math.max(0, dBaliza - 300) / 900, 0.6, 1);
+}
+
+// ---------- Livre direto com efeito ----------
+// Quem bate escolhe o efeito: 0 = sem efeito, 1 = curva para a direita, -1 = curva para a esquerda
+const CURVA_LIVRE = 420;
+const NOMES_EFEITO = { 0: 'sem efeito', 1: 'efeito ➜ direita', '-1': 'efeito ⬅ esquerda' };
+
+function livreDiretoPossivel() {
+  if (!setPiece || setPiece.tipo !== 'livre' || !setPiece.taker) return false;
+  const goalX = setPiece.team === 0 ? W : 0;
+  return Math.hypot(goalX - setPiece.x, H / 2 - setPiece.y) < 420;
+}
+
+function parametrosLivre(p, power) {
+  const vel = velocidadeRemate(p, power);
+  // Altura certa para passar por cima das cabeças da barreira (que alcançam a bola a uns 55 de distância)
+  const tB = 55 / vel;
+  const vz = (33 + 750 * tB * tB) / tB;
+  const curva = (setPiece.efeito || 0) * CURVA_LIVRE * (1 + 0.2 * ps(p, 'Bola Parada'));
+  return { angle: direcao(p), vel, vz, curva };
+}
+
+// Caminho da bola no ar (a mesma física da updateBall), para desenhar a seta curva
+function trajetoriaLivre(p, power) {
+  const k = parametrosLivre(p, power);
+  let x = ball.x, y = ball.y, z = 0, vx = Math.cos(k.angle) * k.vel, vy = Math.sin(k.angle) * k.vel, vz = k.vz, c = k.curva;
+  const pts = [], dt = 1 / 60;
+  for (let i = 0; i < 180; i++) {
+    const v = Math.hypot(vx, vy);
+    if (c && v > 50) { const nx = -vy / v, ny = vx / v; vx += nx * c * dt; vy += ny * c * dt; }
+    c *= Math.pow(0.6, dt);
+    x += vx * dt; y += vy * dt; z += vz * dt;
+    vz -= (GRAVIDADE + 600) * dt;
+    const f = Math.pow(0.85, dt); vx *= f; vy *= f;
+    if (z <= 0 || x < 0 || x > W) { pts.push({ x, y, z: Math.max(0, z) }); break; }
+    pts.push({ x, y, z });
+  }
+  return pts;
+}
+
 function shoot(p, power) {
   const deLivre = state === 'parada' && setPiece && setPiece.tipo === 'livre';
   let f = direcao(p);
@@ -358,11 +412,8 @@ function shoot(p, power) {
   const rasteiro = ps(p, 'Remate Rasteiro');
   const bolaParada = deLivre ? ps(p, 'Bola Parada') : 0;
   const flair = p.posFinta > 0 ? ps(p, 'Flair') : 0;
-  // Força do remate (o Guilherme achou que estava forte demais: o máximo passou de ~1000 para ~650)
-  let velocidade = (300 + power * 330) * (1 + 0.05 * potentePS) * (0.9 + atr(p, 'rem') / 100 * 0.12);
-  // Distância à baliza: de longe a bola chega fraca (ou nem chega); de perto, força a mais pode ir por cima
+  let velocidade = velocidadeRemate(p, power);
   const dBaliza = Math.hypot(goalX - ball.x, H / 2 - ball.y);
-  velocidade *= clamp(1.1 - Math.max(0, dBaliza - 300) / 900, 0.6, 1);
   // Virado para a baliza: na diagonal remata para um canto, a direito remata ao meio
   if (angDiff(f, toGoal) < Math.PI / 3 && Math.abs(goalX - p.x) < 450) {
     const vert = Math.sin(f);
@@ -401,7 +452,19 @@ function shoot(p, power) {
     Narrador.remate(p.chamado);
     return;
   }
-  if (deLivre && dBaliza < 420) {
+  if (deLivre && dBaliza < 420 && t >= 0 && !eCPU(t)) {
+    // Livre direto do jogador: vai para onde a seta aponta, com o efeito escolhido
+    const k = parametrosLivre(p, power);
+    const fim = trajetoriaLivre(p, power).pop();
+    colocado = Math.abs(fim.y - H / 2) > GOAL_W / 2 - 30;
+    curva = k.curva;
+    let vz = k.vz;
+    // Às vezes sai baixo e bate na barreira (mais vezes com força a mais)
+    if (Math.random() < (power > 0.85 ? 0.3 : 0.15) * (1 - 0.35 * bolaParada)) vz *= 0.8;
+    kick(p, k.angle + (Math.random() - 0.5) * 0.05 * (1.6 - atr(p, 'rem') / 100), k.vel, vz);
+    ball.dip = 600;
+    if (bolaParada) psAtivo(p, 'Bola Parada');
+  } else if (deLivre && dBaliza < 420) {
     // Livre direto: altura certa para passar por cima das cabeças da barreira
     // (que alcançam a bola a uns 55 de distância) e efeito para baixo (cai a pique)
     const tBarreira = 55 / velocidade;
@@ -655,6 +718,12 @@ function updateHuman(p, t, dt) {
     p.vx = p.vy = 0;
     if (len) p.facing = p.mira = Math.atan2(dy, dx);
     const pad = `Pad${t}`;
+    if (setPiece.tipo === 'livre') {
+      // Botão de fintas (ou analógico direito do comando) escolhe o efeito do livre
+      if (pressed.has(k.b3)) setPiece.efeito = setPiece.efeito === 0 || !setPiece.efeito ? 1 : setPiece.efeito === 1 ? -1 : 0;
+      const fp = Comando.finta(t);
+      if (fp) setPiece.efeito = fp.dx > 0.5 ? 1 : fp.dx < -0.5 ? -1 : 0;
+    }
     if (setPiece.tipo === 'saida') {
       if (pressed.has(k.b1) || pressed.has(k.b2) || pressed.has(pad + 'Passe') || pressed.has(pad + 'Alto')) pass(p);
       return;
@@ -1151,7 +1220,7 @@ function startSetPiece(tipo, team, x, y, texto, sub, cartao) {
   ball.owner = null;
   ball.vx = ball.vy = ball.vz = 0;
   Som.apito(false);
-  setPiece = { tipo, team, x, y, taker: null };
+  setPiece = { tipo, team, x, y, taker: null, efeito: 0 };
   aviso = { texto: texto || NOMES_PARADA[tipo], sub: sub || `${EQUIPAS[team].nome}`, cartao: cartao || null, t: 2.2 };
   charging = [false, false]; charge = [0, 0];
   state = 'apito';
@@ -1174,6 +1243,7 @@ function placeSetPiece() {
 
   let taker;
   if (sp.tipo === 'baliza') taker = players.find(p => p.team === sp.team && p.gk);
+  else if (sp.takerFixo && players.includes(sp.takerFixo)) taker = sp.takerFixo;
   else {
     const field = players.filter(p => p.team === sp.team && !p.gk);
     taker = field.reduce((a, b) => (dist(b, ball) < dist(a, ball) ? b : a));
@@ -1187,7 +1257,18 @@ function placeSetPiece() {
   taker.holdTime = 0;
   if (!taker.gk) human[sp.team] = taker;
 
-  if (sp.tipo === 'penalti') {
+  if (sp.tipo === 'penalti' && desempate) {
+    // Desempate: os outros ficam todos no círculo central, como na TV
+    const outros = players.filter(p => p !== taker && !p.gk);
+    outros.forEach((p, i) => {
+      const a = (i / outros.length) * Math.PI * 2;
+      p.x = W / 2 + Math.cos(a) * 75; p.y = H / 2 + Math.sin(a) * 75;
+      p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
+    });
+    const gr = players.find(p => p.gk && p.team !== sp.team);
+    if (gr) { gr.x = sp.team === 0 ? W - 8 : 8; gr.y = H / 2; gr.facing = sp.team === 0 ? Math.PI : 0; gr.mergulho = 0; }
+    desempate.t = 0;
+  } else if (sp.tipo === 'penalti') {
     // Todos fora da área, só o marcador e o guarda-redes
     const def = 1 - sp.team;
     const box = def === 0 ? 175 : W - 175;
@@ -1301,6 +1382,7 @@ function ballOut() {
   const fiscal = arbitros.filter(a => a.tipo === 'fiscal')
     .reduce((a, b) => (dist(b, ball) < dist(a, ball) ? b : a), arbitros[1]);
   if (fiscal) fiscal.bandeira = 1.6;
+  if (desempate) { ball.vx = ball.vy = ball.vz = 0; return penaltiFalhado(); }
   if (ball.y < 0 || ball.y > H) {
     const y = ball.y < 0 ? 2 : H - 2;
     return startSetPiece('lateral', 1 - last, clamp(ball.x, 10, W - 10), y);
@@ -1538,6 +1620,17 @@ function separatePlayers() {
 
 function goal(team) {
   Som.golo();
+  if (desempate) {
+    // Golo no desempate: conta para os penáltis, não para o resultado do jogo
+    marcador = desempate.quem ? desempate.quem.nome : '';
+    if (desempate.quem) Narrador.golo(desempate.quem.chamado);
+    lastScorer = team;
+    ball.owner = null;
+    registarPenalti(true);
+    state = 'golo';
+    stateTimer = 2.2;
+    return;
+  }
   const t = ball.lastTouch;
   marcador = t ? (t.team === team ? t.nome : `${t.nome} (autogolo)`) : '';
   if (t && t.team === team) Narrador.golo(t.chamado);
@@ -1586,7 +1679,7 @@ function update(dt) {
     ball.z = Math.max(0, ball.z - 40 * dt);
     ball.x = clamp(ball.x, -GOAL_D + BALL_R, W + GOAL_D - BALL_R);
     if (stateTimer > 2.3) gravar(dt);   // grava a bola a entrar na rede
-    if (stateTimer <= 0) comecarReplay();
+    if (stateTimer <= 0) { if (desempate) seguintePenalti('', ''); else comecarReplay(); }
     return;
   }
   if (state === 'replay') {
@@ -1594,6 +1687,13 @@ function update(dt) {
     return;
   }
   relogio += dt;
+  if (!desempate && (state === 'jogo' || state === 'parada')) {
+    tempoRestante = Math.max(0, tempoRestante - dt);
+    // Acabou o tempo: o árbitro só espera se houver um remate a caminho da baliza ou um penálti por bater
+    const remateNoAr = ball.remate && !ball.owner && Math.hypot(ball.vx, ball.vy) > 150;
+    const penaltiPorBater = state === 'parada' && setPiece && setPiece.tipo === 'penalti';
+    if (tempoRestante <= 0 && !remateNoAr && !penaltiPorBater) return fimDoTempo();
+  }
   if (aviso) { aviso.t -= dt; if (aviso.t <= 0) aviso = null; }
   for (let i = popups.length - 1; i >= 0; i--) { popups[i].t -= dt; if (popups[i].t <= 0) popups.splice(i, 1); }
   updateArbitros(dt);
@@ -1625,7 +1725,12 @@ function update(dt) {
     p.tentativa = Math.max(0, p.tentativa - dt);
     if (ball.owner === p) p.holdTime += dt;
     const t = human.indexOf(p);
-    if (p.slide > 0 || p.chao > 0) updateSlide(p, dt);
+    if (desempate && !p.gk && !(setPiece && setPiece.taker === p)) {
+      // Nos penáltis do desempate só jogam o marcador e o guarda-redes; os outros ficam no meio-campo
+      p.vx *= 0.8; p.vy *= 0.8;
+      p.facing = rodarPara(p.facing, Math.atan2(ball.y - p.y, ball.x - p.x), dt * 4);
+    }
+    else if (p.slide > 0 || p.chao > 0) updateSlide(p, dt);
     else if (t >= 0 && eCPU(t)) updateCPU(p, dt);
     else if (t >= 0) updateHuman(p, t, dt);
     else updateAI(p, dt);
@@ -1637,6 +1742,7 @@ function update(dt) {
   keepAway();
   handlePossession();
   updateBall(dt);
+  if (desempate && state === 'jogo') vigiarPenalti(dt);
   if (state === 'jogo' || state === 'golo') gravar(dt);
 }
 
@@ -1710,12 +1816,79 @@ function updateReplay(dt) {
 }
 
 function acabarReplay() {
-  if (fimDepois) {
-    state = 'fim';
-    stateTimer = 1.5;
-    Som.apito(true);
-    Narrador.fim(EQUIPAS[lastScorer].nome);
-  } else resetKickoff();
+  if (fimDepois) acabarJogo(lastScorer);
+  else resetKickoff();
+}
+
+function acabarJogo(equipa) {
+  vencedor = equipa;
+  state = 'fim';
+  stateTimer = 1.5;
+  aviso = null;
+  ball.vx = ball.vy = ball.vz = 0;
+  Som.apito(true);
+  Narrador.fim(EQUIPAS[equipa].nome);
+}
+
+// ---------- Fim do tempo e desempate por penáltis ----------
+function fimDoTempo() {
+  if (score[0] !== score[1]) return acabarJogo(score[0] > score[1] ? 0 : 1);
+  Som.apito(true);
+  Narrador.penaltis();
+  desempate = { golos: [0, 0], batidos: [0, 0], hist: [[], []], vez: 0, vencedor: -1, quem: null, t: 0 };
+  charging = [false, false]; charge = [0, 0];
+  proximoPenalti('EMPATE! VAMOS A PENÁLTIS', `${PENALTIS_CADA} para cada equipa · se continuar empatado, morte súbita`);
+  stateTimer = 3;
+}
+
+// Escolhe quem bate a seguir (os melhores primeiro) e prepara o penálti
+function proximoPenalti(texto, sub) {
+  const d = desempate, t = d.vez;
+  const lista = players.filter(p => p.team === t && !p.gk).sort((a, b) => (b.ovr || 0) - (a.ovr || 0));
+  d.quem = lista[d.batidos[t] % lista.length];
+  ball.owner = null;
+  startSetPiece('penalti', t, t === 0 ? W - 110 : 110, H / 2,
+    texto || 'PENÁLTI', sub || `${EQUIPAS[t].nome} · bate ${d.quem.nome}`);
+  setPiece.takerFixo = d.quem;
+  stateTimer = 2;
+}
+
+// Conta um penálti e vê se alguém já ganhou
+function registarPenalti(marcou) {
+  const d = desempate, t = d.vez, n = PENALTIS_CADA;
+  d.hist[t].push(marcou);
+  d.batidos[t]++;
+  if (marcou) d.golos[t]++;
+  const [g0, g1] = d.golos, [b0, b1] = d.batidos;
+  if (b0 <= n && b1 <= n) {
+    // Já não dá para apanhar, mesmo marcando todos os que faltam
+    if (g0 > g1 + (n - b1)) d.vencedor = 0;
+    else if (g1 > g0 + (n - b0)) d.vencedor = 1;
+  }
+  if (d.vencedor < 0 && b0 === b1 && b0 >= n && g0 !== g1) d.vencedor = g0 > g1 ? 0 : 1;
+  d.vez = b0 > b1 ? 1 : 0;
+}
+
+function seguintePenalti(texto, sub) {
+  const d = desempate;
+  if (d.vencedor >= 0) return acabarJogo(d.vencedor);
+  proximoPenalti(texto, sub);
+}
+
+function penaltiFalhado() {
+  const d = desempate;
+  const defendeu = (ball.owner && ball.owner.gk) || (ball.lastTouch && ball.lastTouch.gk);
+  if (!defendeu) { Som.uh(); Narrador.uh(); }
+  registarPenalti(false);
+  seguintePenalti(defendeu ? 'DEFENDEU!' : 'FALHOU!', `${d.quem ? d.quem.nome : ''} · penáltis ${d.golos[0]} - ${d.golos[1]}`);
+}
+
+// Depois do remate: se a bola parou, foi agarrada ou tocou noutro jogador, o penálti falhou
+function vigiarPenalti(dt) {
+  const d = desempate;
+  d.t += dt;
+  const outro = ball.lastTouch && ball.lastTouch !== d.quem && !ball.lastTouch.gk;
+  if (ball.owner || outro || Math.hypot(ball.vx, ball.vy) < 25 || d.t > 4) penaltiFalhado();
 }
 
 // O que o 3D deve mostrar: o jogo ao vivo ou a repetição

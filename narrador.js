@@ -54,6 +54,7 @@ const Narrador = (() => {
     penalti: () => dizer('Penálti! O árbitro aponta para a marca!', 3),
     uh: () => dizer(umDe(['Uuuh, por pouco!', 'Ao lado! Quase golo!', 'Passou muito perto do poste!']), 2),
     canto: () => dizer('Canto.', 1),
+    penaltis: () => dizer('Fim do tempo! Está empatado, vamos para os penáltis!', 3),
     fim: eq => dizer(`Apita o árbitro, fim do jogo! Vitória de ${eq}!`, 3),
   };
 })();

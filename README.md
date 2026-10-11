@@ -1,7 +1,7 @@
 # Futebol 26
 
 Jogo de futebol 3D para 2 jogadores no mesmo teclado, inspirado no FC 26.
-18 equipas, 7 estádios, câmara de TV, estádio com adeptos.
+19 equipas, 7 estádios, jogos de 2 minutos com penáltis se houver empate, câmara de TV, estádio com adeptos.
 
 ## Como jogar
 
