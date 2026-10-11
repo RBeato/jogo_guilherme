@@ -33,6 +33,9 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - O botão 2 só faz carrinho quando é o **adversário** que tem a bola. Com a bola solta ou com
   um colega, carrega o remate — dá para **rematar de primeira** quando a bola chega.
 - O **guarda-redes é sempre controlado pelo computador**.
+- **Pontapé de saída:** quem está no meio-campo é obrigado a passar (decisão do Guilherme).
+  Fica parado, aponta com as teclas de andar e passa com qualquer um dos dois botões;
+  os adversários ficam fora do círculo central até ao passe.
 - A força depende da distância (decisão do Guilherme): **muito perto** com força a mais a bola
   pode ir por cima da trave (~35%) ou dar golo; **de longe** chega fraca e o GR agarra;
   **de muito longe** pára antes da baliza.

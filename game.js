@@ -506,6 +506,10 @@ function updateHuman(p, t, dt) {
   if (state === 'parada' && setPiece && setPiece.taker === p) {
     p.vx = p.vy = 0;
     if (len) p.facing = p.mira = Math.atan2(dy, dx);
+    if (setPiece.tipo === 'saida') {
+      if (pressed.has(k.b1) || pressed.has(k.b2)) pass(p);
+      return;
+    }
     if (pressed.has(k.b2)) { charging[t] = true; charge[t] = 0; }
     if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 1.1);
     if (released.has(k.b2) && charging[t]) {
@@ -865,6 +869,20 @@ function placeSetPiece() {
   cpu.espera = 0;
 }
 
+// Pontapé de saída: quem está no meio-campo é obrigado a passar (não pode rematar nem fugir com a bola)
+function comecarSaida() {
+  const taker = human[kickoffTeam];
+  ball.owner = taker;
+  ball.z = ball.vz = 0;
+  // Começa virado para o colega mais perto, para o passe sair fácil
+  const colegas = players.filter(p => p.team === kickoffTeam && p !== taker && !p.gk);
+  const perto = colegas.reduce((a, b) => (dist(b, taker) < dist(a, taker) ? b : a), colegas[0]);
+  if (perto) taker.facing = taker.mira = Math.atan2(perto.y - taker.y, perto.x - taker.x);
+  setPiece = { tipo: 'saida', team: kickoffTeam, x: W / 2, y: H / 2, taker, barreira: [] };
+  state = 'parada';
+  cpu.espera = 0;
+}
+
 // Os adversários têm de ficar longe da bola até ela ser batida
 function keepAway() {
   if (!setPiece) return;
@@ -1159,8 +1177,7 @@ function update(dt) {
   if (state === 'inicio') {
     stateTimer -= dt;
     if (stateTimer <= 0) {
-      state = 'jogo';
-      ball.owner = human[kickoffTeam];
+      comecarSaida();
       Som.apito(false);
       if (primeiroApito) { Narrador.inicio(); primeiroApito = false; }
     }

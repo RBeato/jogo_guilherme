@@ -292,7 +292,10 @@ const Hud = (() => {
   function dicaBolaParada() {
     if (state !== 'parada' || !setPiece || !setPiece.taker || setPiece.taker.gk || eCPU(setPiece.team)) return;
     const t = setPiece.team;
-    const k = t === 0 ? 'W A S D apontar · F passar · G rematar' : 'Setas apontar · K passar · L rematar';
+    const saida = setPiece.tipo === 'saida';
+    const k = saida
+      ? (t === 0 ? 'Pontapé de saída: W A S D apontar · F passar' : 'Pontapé de saída: Setas apontar · K passar')
+      : (t === 0 ? 'W A S D apontar · F passar · G rematar' : 'Setas apontar · K passar · L rematar');
     // Dica em cima (por baixo do aviso do árbitro), para não tapar a jogada
     caixa(canvas.width / 2 - 200 * s, 164 * s, 400 * s, 30 * s, 'rgba(8,12,28,0.8)', 6);
     texto(`J${t + 1}: ${k}`, canvas.width / 2, 184 * s, 14, COR_J[t], 'center', '700');
