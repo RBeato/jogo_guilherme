@@ -809,12 +809,10 @@ const Render = (() => {
       m.cotovelos[0].rotation.z = m.cotovelos[1].rotation.z = 0.1;
       m.cabeca.rotation.set(0, 0, 0.4);
     } else if (pose === 'chuto') {
-      m.ancas[1].rotation.z = 1.3;
-      m.joelhos[1].rotation.z = -0.1;
-      m.ancas[0].rotation.z = -0.25;
-      m.joelhos[0].rotation.z = -0.3;
-      m.ombros[0].rotation.set(-0.6, 0, 0.7); m.ombros[1].rotation.set(0.6, 0, -0.6);
-      m.corpo.rotation.z = 0.1;
+      // Chuta a correr: só a perna direita e os braços mudam, o resto continua a correr
+      m.ancas[1].rotation.z = 1.2;
+      m.joelhos[1].rotation.z = -0.15;
+      m.ombros[0].rotation.set(-0.5, 0, 0.6); m.ombros[1].rotation.set(0.5, 0, -0.5);
     } else if (pose === 'cabeca') {
       m.corpo.position.y = 3;
       m.corpo.rotation.z = -0.35;
@@ -835,6 +833,11 @@ const Render = (() => {
     }
   }
 
+  // Roleta: o corpo dá uma volta enquanto dura a finta
+  function rodarFinta(m, d) {
+    if (d.finta > 0) m.corpo.rotation.y = (1 - d.finta / 0.4) * Math.PI * 2 * (d.fintaLado || 1);
+  }
+
   const modelos = new Map();
 
   function atualizarBonecos(v, dt) {
@@ -850,10 +853,11 @@ const Render = (() => {
       else if (d.mergulho > 0) pose = 'mergulho';
       else if (!v.replay && (state === 'golo' || state === 'fim') && p.team === lastScorer) pose = 'festa';
       else if (d.cabeceou > 0) pose = 'cabeca';
-      else if (d.cooldown > 0.12) pose = 'chuto';
+      else if (d.cooldown > 0.2) pose = 'chuto';
       else if (p.gk && (p.team === 0 ? b.x < 330 : b.x > W - 330) && Math.hypot(d.vx, d.vy) < 90 &&
                !(ball.owner === p)) pose = 'guarda';
       animarBoneco(m, d, dt, pose, Math.atan2(b.y - d.y, b.x - d.x));
+      rodarFinta(m, d);
     }
     for (const d of v.arbitros) {
       const a = d.ref || d;

@@ -20,6 +20,7 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - **Tecla 1: contra o computador.** O J1 joga com W A S D + F/G; o computador controla a equipa do J2.
   Carregar 1 outra vez muda o nível: **Fácil, Médio, Difícil** (velocidade, tempo de reação e pontaria).
 - **Tecla 2: 2 jogadores** no mesmo teclado.
+- **Tecla 3: 5 contra 5** · **Tecla 4: 11 contra 11** (4-3-3; cada equipa tem 11 jogadores com "i").
 
 ## 2. Controlos (só 2 botões — decidido pelo Guilherme)
 
@@ -33,6 +34,12 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - O botão 2 só faz carrinho quando é o **adversário** que tem a bola. Com a bola solta ou com
   um colega, carrega o remate — dá para **rematar de primeira** quando a bola chega.
 - O **guarda-redes é sempre controlado pelo computador**.
+- **Botão 3 = finta (roleta):** H para o J1, Ç para o J2. Quem marca pode ficar desequilibrado
+  (depende do drible); durante a finta não te tiram a bola.
+- **Passe alto:** segurar o botão de passe (toque = rasteiro). Também serve para cruzar nos cantos e livres.
+- **Guarda-redes com a bola nas mãos:** os adversários ficam a 80 e não há carrinhos contra ele;
+  se estiver apertado, chuta para longe pelo ar.
+- **Livres, lançamentos e cantos:** ninguém à frente da bola nem a menos de 40 dela.
 - **Pontapé de saída:** quem está no meio-campo é obrigado a passar (decisão do Guilherme).
   Fica parado, aponta com as teclas de andar e passa com qualquer um dos dois botões;
   os adversários ficam fora do círculo central até ao passe.

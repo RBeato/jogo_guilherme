@@ -216,3 +216,79 @@ const TODAS_EQUIPAS = [
       j('Guilherme', 10, 'PL', 92, [94, 93, 86, 93, 40, 78], 'Remate Potente', 'c c topete 0 #ffd60a'),
     ]),
 ];
+
+// ---------- Mais 6 jogadores por equipa, para o 11 contra 11 ----------
+// Ordem: defesa direito, defesa central, médio, médio, extremo direito, extremo esquerdo.
+// Os atributos destes vêm da posição e da classificação (são mais simples do que os dos 5 principais).
+const MODELO_POSICAO = {
+  DD: { at: [86, 60, 74, 78, 78, 74], ps: 'Rápido' },
+  DE: { at: [86, 60, 74, 78, 78, 74], ps: 'Rápido' },
+  DC: { at: [70, 40, 66, 64, 84, 82], ps: 'Muralha' },
+  MC: { at: [72, 74, 84, 82, 70, 72], ps: 'Passe Incisivo' },
+  ED: { at: [88, 78, 76, 86, 38, 66], ps: 'Rápido' },
+  EE: { at: [88, 78, 76, 86, 38, 66], ps: 'Remate Colocado' },
+};
+// x(nome, número, posição, classificação, aspeto, PlayStyle opcional)
+function x(nome, num, posicao, ovr, aspeto, ps) {
+  const m = MODELO_POSICAO[posicao];
+  const at = m.at.map(v => Math.max(20, Math.min(99, v + (ovr - 82))));
+  return j(nome, num, posicao, ovr, at, ps || m.ps, aspeto);
+}
+
+const EXTRA_11 = {
+  'PORTUGAL': [x('João Canceloi', 20, 'DD', 84, 't e curto 1'), x('Gonçalo Inácioi', 14, 'DC', 83, 'c c curto 0'),
+    x('Vitinhai', 23, 'MC', 88, 't e curto 0'), x('João Nevesi', 15, 'MC', 85, 'c c curto 0', 'Intercetor'),
+    x('Bernardo Silvai', 10, 'ED', 86, 'c c curto 1', 'Passe Incisivo'), x('Rafael Leãoi', 17, 'EE', 85, 'e p curto 0')],
+  'FRANÇA': [x('Jules Koundéi', 5, 'DD', 85, 'e p curto 0'), x('Ibrahima Konatéi', 24, 'DC', 84, 'n p rapado 0'),
+    x('Adrien Rabioti', 14, 'MC', 84, 'c c volume 1'), x('Manu Konéi', 6, 'MC', 83, 'n p curto 0', 'Intercetor'),
+    x('Ousmane Dembéléi', 7, 'ED', 90, 'n p curto 0', 'Remate Colocado'), x('Bradley Barcolai', 11, 'EE', 84, 'n p curto 0', 'Rápido')],
+  'BRASIL': [x('Daniloi', 2, 'DD', 80, 'm p rapado 1'), x('Gabriel Magalhãesi', 6, 'DC', 86, 'm p curto 1'),
+    x('Casemiroi', 8, 'MC', 82, 'm p rapado 1', 'Intercetor'), x('Lucas Paquetái', 10, 'MC', 83, 'm p volume 0'),
+    x('Raphinhai', 11, 'ED', 88, 'm p curto 0', 'Remate Potente'), x('Rodrygoi', 21, 'EE', 85, 'e p curto 0')],
+  'ARGENTINA': [x('Nahuel Molinai', 26, 'DD', 82, 'm e curto 1'), x('Nicolás Otamendii', 19, 'DC', 80, 'c e curto 1', 'Carrinho'),
+    x('Alexis Mac Allisteri', 20, 'MC', 86, 'c r curto 0'), x('Rodrigo De Pauli', 7, 'MC', 83, 'c e curto 1', 'Intercetor'),
+    x('Julián Álvarezi', 9, 'ED', 86, 'c c curto 0', 'Remate Potente'), x('Lautaro Martínezi', 22, 'EE', 87, 'm p curto 1', 'Remate Potente')],
+  'ESPANHA': [x('Pedro Porroi', 12, 'DD', 83, 'c e curto 0'), x('Robin Le Normandi', 3, 'DC', 83, 'c l curto 1'),
+    x('Rodrii', 16, 'MC', 89, 'c c curto 1', 'Intercetor'), x('Fabián Ruizi', 8, 'MC', 85, 'c e curto 1'),
+    x('Dani Olmoi', 10, 'ED', 84, 'c c curto 0', 'Remate Colocado'), x('Nico Williamsi', 17, 'EE', 86, 'n p curto 0', 'Rápido')],
+  'INGLATERRA': [x('Reece Jamesi', 2, 'DD', 84, 'n p curto 1'), x('John Stonesi', 5, 'DC', 84, 'c c curto 0'),
+    x('Cole Palmeri', 20, 'MC', 87, 'c r curto 0', 'Remate Colocado'), x('Elliot Andersoni', 8, 'MC', 82, 'c c curto 0'),
+    x('Bukayo Sakai', 7, 'ED', 88, 'n p curto 0', 'Rápido'), x('Anthony Gordoni', 11, 'EE', 84, 'c c curto 0')],
+  'ALEMANHA': [x('Waldemar Antoni', 3, 'DD', 81, 'c c curto 1'), x('Jonathan Tahi', 4, 'DC', 85, 'n p rapado 0'),
+    x('Leon Goretzkai', 8, 'MC', 84, 'c c curto 1'), x('Aleksandar Pavlovići', 16, 'MC', 83, 'c c curto 0', 'Intercetor'),
+    x('Leroy Sanéi', 19, 'ED', 84, 'n p curto 0'), x('Serge Gnabryi', 7, 'EE', 82, 'n p curto 1')],
+  'BENFICA': [x('Amar Dedići', 17, 'DD', 79, 'c c curto 0'), x('Tomás Araújoi', 44, 'DC', 79, 'c c curto 0'),
+    x('Fredrik Aursnesi', 8, 'MC', 81, 'c l curto 0', 'Intercetor'), x('Richard Ríosi', 20, 'MC', 80, 'm p curto 0'),
+    x('Andreas Schjelderupi', 21, 'ED', 79, 'c l curto 0'), x('Gianluca Prestiannii', 25, 'EE', 77, 'c e curto 0')],
+  'FC PORTO': [x('Alberto Costai', 2, 'DD', 76, 'c e curto 0'), x('Jakub Kiwiori', 4, 'DC', 80, 'c c curto 0'),
+    x('Pablo Rosarioi', 13, 'MC', 78, 'n p curto 0', 'Intercetor'), x('Victor Froholdti', 8, 'MC', 78, 'c l curto 0'),
+    x('William Gomesi', 11, 'ED', 77, 'n p curto 0'), x('Borja Sainzi', 7, 'EE', 77, 'c e curto 1')],
+  'SPORTING': [x('Iván Fresnedai', 22, 'DD', 76, 'c c curto 0'), x('Gonçalo Inácioi', 25, 'DC', 83, 'c c curto 0'),
+    x('Pedro Gonçalvesi', 8, 'MC', 82, 'c e curto 1', 'Remate Colocado'), x('Daniel Bragançai', 23, 'MC', 78, 'c c curto 0'),
+    x('Geovany Quendai', 57, 'ED', 80, 'e p curto 0'), x('Francisco Trincãoi', 17, 'EE', 82, 'c e curto 0')],
+  'SC BRAGA': [x('Víctor Gómezi', 2, 'DD', 75, 'c e curto 1'), x('Sikou Niakatéi', 4, 'DC', 76, 'n p rapado 0'),
+    x('João Moutinhoi', 8, 'MC', 77, 'c c curto 1'), x('Jean-Baptiste Gorbyi', 14, 'MC', 76, 'n p curto 0', 'Intercetor'),
+    x('Roger Fernandesi', 20, 'ED', 77, 'n p curto 0'), x('Fran Navarroi', 39, 'EE', 77, 'c c curto 0', 'Remate Potente')],
+  'REAL MADRID': [x('Trent Alexander-Arnoldi', 12, 'DD', 86, 'c c curto 0', 'Passe Incisivo'), x('Dean Huijseni', 24, 'DC', 82, 'c c curto 0'),
+    x('Aurélien Tchouaménii', 14, 'MC', 85, 'n p volume 0', 'Intercetor'), x('Arda Güleri', 15, 'MC', 84, 'c e curto 0', 'Remate Colocado'),
+    x('Rodrygoi', 11, 'ED', 85, 'e p curto 0'), x('Vinícius Júniori', 7, 'EE', 90, 'n p volume 0 #ff2d55', 'Rápido')],
+  'BARCELONA': [x('Eric Garcíai', 24, 'DD', 80, 'c c curto 0'), x('Ronald Araújoi', 4, 'DC', 84, 'm p curto 0'),
+    x('Frenkie de Jongi', 21, 'MC', 86, 'c l curto 0'), x('Gavii', 6, 'MC', 83, 'c e curto 0', 'Intercetor'),
+    x('Raphinhai', 11, 'ED', 88, 'm p curto 0', 'Remate Potente'), x('Marcus Rashfordi', 14, 'EE', 83, 'n p curto 0')],
+  'MANCHESTER CITY': [x('Matheus Nunesi', 27, 'DD', 81, 'm p curto 0'), x('John Stonesi', 5, 'DC', 84, 'c c curto 0'),
+    x('Tijjani Reijndersi', 4, 'MC', 84, 'm p curto 0'), x('Phil Fodeni', 47, 'MC', 86, 'c c rapado 0', 'Remate Colocado'),
+    x('Omar Marmoushi', 7, 'ED', 84, 'm p curto 1'), x('Jérémy Dokui', 11, 'EE', 84, 'n p curto 0', 'Rápido')],
+  'BAYERN': [x('Konrad Laimeri', 27, 'DD', 81, 'c c curto 0'), x('Jonathan Tahi', 4, 'DC', 85, 'n p rapado 0'),
+    x('Aleksandar Pavlovići', 45, 'MC', 83, 'c c curto 0', 'Intercetor'), x('Jamal Musialai', 42, 'MC', 88, 'm p curto 0', 'Rápido'),
+    x('Michael Olisei', 17, 'ED', 87, 'n p curto 0', 'Remate Colocado'), x('Luis Díazi', 14, 'EE', 86, 'm p volume 0')],
+  'LIVERPOOL': [x('Jeremie Frimpongi', 30, 'DD', 83, 'n p curto 0'), x('Milos Kerkezi', 6, 'DC', 80, 'c c curto 0'),
+    x('Alexis Mac Allisteri', 10, 'MC', 86, 'c r curto 0'), x('Dominik Szoboszlaii', 8, 'MC', 84, 'c l curto 0', 'Remate Potente'),
+    x('Hugo Ekitikéi', 22, 'ED', 84, 'n p curto 0'), x('Cody Gakpoi', 18, 'EE', 84, 'e p curto 0')],
+  'PARIS SG': [x('Nuno Mendesi', 25, 'DD', 86, 'e p volume 0'), x('Willian Pachoi', 51, 'DC', 83, 'm p curto 1'),
+    x('João Nevesi', 87, 'MC', 85, 'c c curto 0', 'Intercetor'), x('Fabián Ruizi', 8, 'MC', 85, 'c e curto 1'),
+    x('Désiré Douéi', 14, 'ED', 85, 'n p curto 0'), x('Khvicha Kvaratskheliai', 7, 'EE', 87, 'c c curto 0', 'Rápido')],
+  'GUILHERME FC': [x('Afonso Matos', 2, 'DD', 79, 'c c curto 0'), x('Pedro Gomes', 5, 'DC', 79, 'c e curto 0'),
+    x('Martim Sousa', 6, 'MC', 80, 'c l curto 0'), x('Lourenço Costa', 7, 'MC', 80, 'm p curto 0'),
+    x('Santiago Reis', 11, 'ED', 81, 'e p curto 0'), x('Duarte Faria', 9, 'EE', 81, 'c c topete 0')],
+};
+for (const eq of TODAS_EQUIPAS) eq.plantel11 = eq.plantel.concat(EXTRA_11[eq.nome] || []);

@@ -17,8 +17,8 @@ const GOLS_PARA_GANHAR = 5;
 //   botão 1: com bola = passar,  sem bola = mudar de jogador
 //   botão 2: com bola = rematar (segurar = mais força),  sem bola = carrinho
 const TECLAS = [
-  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', b1: 'KeyF', b2: 'KeyG' },
-  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', b1: 'KeyK', b2: 'KeyL' },
+  { up: 'KeyW', down: 'KeyS', left: 'KeyA', right: 'KeyD', b1: 'KeyF', b2: 'KeyG', b3: 'KeyH' },
+  { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', b1: 'KeyK', b2: 'KeyL', b3: 'Semicolon' },
 ];
 
 const down = new Set();
@@ -97,6 +97,24 @@ const FORMACAO_5 = [
   { pos: 'Avançado', num: 9, x: 0.46, y: 0.5 },
 ];
 
+// 11 contra 11 em 4-3-3. Os primeiros 5 lugares são os mesmos do 5 contra 5
+// (GR, central, lateral esquerdo, médio, ponta de lança); depois vêm os outros 6.
+const FORMACAO_11 = [
+  { pos: 'Guarda-redes', x: 0.03, y: 0.5 },
+  { pos: 'Defesa central', x: 0.17, y: 0.4 },
+  { pos: 'Defesa esquerdo', x: 0.21, y: 0.12 },
+  { pos: 'Médio', x: 0.31, y: 0.5 },
+  { pos: 'Avançado', x: 0.46, y: 0.5 },
+  { pos: 'Defesa direito', x: 0.21, y: 0.88 },
+  { pos: 'Defesa central', x: 0.17, y: 0.6 },
+  { pos: 'Médio', x: 0.3, y: 0.28 },
+  { pos: 'Médio', x: 0.3, y: 0.72 },
+  { pos: 'Extremo direito', x: 0.42, y: 0.84 },
+  { pos: 'Extremo esquerdo', x: 0.42, y: 0.16 },
+];
+let numJogadores = 5;           // 5 contra 5 ou 11 contra 11 (escolhe-se no menu)
+const formacao = () => (numJogadores === 11 ? FORMACAO_11 : FORMACAO_5);
+
 // ---------- Utilitários ----------
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // Atributo do jogador (ritmo, remate, passe, drible, defesa, físico, reflexos), 75 se não tiver
@@ -141,6 +159,8 @@ function psAtivo(p) {
 }
 let charge = [0, 0];           // força do remate (0 a 1)
 let charging = [false, false];
+let cargaPasse = [0, 0];       // tempo a segurar o botão de passe (segurar = passe alto)
+let aPassar = [false, false];
 let shotId = 0;
 let setPiece = null;           // bola parada: { tipo, team, x, y, taker }
 let aviso = null;              // mensagem do árbitro: { texto, sub, cartao, t }
@@ -153,16 +173,17 @@ const NOMES_PARADA = {
 function attackDir(team) { return team === 0 ? 1 : -1; }
 
 function basePos(team, slot) {
-  const f = FORMACAO_5[slot];
+  const f = formacao()[slot];
   return { x: team === 0 ? f.x * W : W - f.x * W, y: f.y * H };
 }
 
 function createPlayers() {
   players = [];
   for (let team = 0; team < 2; team++) {
-    FORMACAO_5.forEach((f, slot) => {
+    const plantel = numJogadores === 11 ? EQUIPAS[team].plantel11 : EQUIPAS[team].plantel;
+    formacao().forEach((f, slot) => {
       const b = basePos(team, slot);
-      const j = EQUIPAS[team].plantel[slot];
+      const j = plantel[slot];
       players.push({
         team, slot, num: j.num, nome: j.nome, chamado: j.chamado || j.nome.split(' ').slice(-1)[0],
         ps: j.ps, pos: f.pos, gk: slot === 0, ovr: j.ovr, posicao: j.posicao, at: j.at || {},
@@ -185,6 +206,7 @@ function createPlayers() {
         toque: 0,         // fase dos toques na bola ao correr
         mergulho: 0, mergulhoDir: 0,      // mergulho do guarda-redes
         cabeceou: 0,      // animação de cabeceamento
+        finta: 0, fintaLado: 1,   // finta (roleta) em curso
         psCd: 0,          // espera até o PlayStyle poder voltar a aparecer
         corrida: 0,       // tempo a correr com a bola em velocidade máxima
       });
@@ -214,6 +236,8 @@ function resetKickoff() {
   setPiece = null;
   charge = [0, 0];
   charging = [false, false];
+  cargaPasse = [0, 0];
+  aPassar = [false, false];
   GRAVACAO.length = 0;
   state = 'inicio';
   stateTimer = 1.2;
@@ -222,7 +246,8 @@ function resetKickoff() {
 // Jogador de campo mais avançado da equipa (o avançado, ou quem estiver no lugar dele)
 function frontPlayer(team) {
   const field = players.filter(p => p.team === team && !p.gk);
-  return field.reduce((a, b) => (b.slot > a.slot ? b : a));
+  const frente = p => formacao()[p.slot].x;
+  return field.reduce((a, b) => (frente(b) > frente(a) ? b : a));
 }
 
 function newGame() {
@@ -383,6 +408,49 @@ function pass(p) {
   if (frente) psAtivo(p);
 }
 
+// Passe alto: a bola sobe em arco e cai no colega (ou à frente, se não houver ninguém)
+function passeAlto(p, forca) {
+  const f = direcao(p);
+  let best = null, bestScore = Infinity;
+  for (const m of players) {
+    if (m.team !== p.team || m === p || m.gk) continue;
+    const d = dist(p, m);
+    const diff = angDiff(Math.atan2(m.y - p.y, m.x - p.x), f);
+    if (diff > Math.PI * 0.35 || d < 60) continue;
+    // Com mais força prefere colegas mais longe
+    const s = diff * 500 + Math.abs(d - (120 + forca * 380)) * 0.3;
+    if (s < bestScore) { bestScore = s; best = m; }
+  }
+  let tx, ty;
+  if (best) {
+    const d = dist(p, best);
+    const t0 = d / 380;
+    // Cai um pouco à frente do colega, para ele ir ao encontro da bola
+    tx = best.x + best.vx * t0 + attackDir(p.team) * 15;
+    ty = best.y + best.vy * t0;
+  } else {
+    const d = 140 + forca * 320;
+    tx = p.x + Math.cos(f) * d;
+    ty = p.y + Math.sin(f) * d;
+  }
+  tx = clamp(tx, 5, W - 5); ty = clamp(ty, 5, H - 5);
+  const d = Math.hypot(tx - ball.x, ty - ball.y);
+  // Tempo de voo (mais longo quanto mais longe) e velocidade para a bola cair no sítio certo
+  const T = clamp(0.45 + d / 900, 0.6, 1.3);
+  const v = (d / T) * 1.06;
+  const erro = (Math.random() - 0.5) * 0.06 * (1.7 - atr(p, 'pas') / 100);
+  kick(p, Math.atan2(ty - ball.y, tx - ball.x) + erro, v, (GRAVIDADE * T) / 2);
+}
+
+// Chuto longo do guarda-redes: a bola vai alta para o meio-campo, por cima de toda a gente
+function chutoLongo(p) {
+  const tx = clamp(p.x + attackDir(p.team) * (400 + Math.random() * 120), 20, W - 20);
+  const ty = H / 2 + (Math.random() - 0.5) * 260;
+  const d = Math.hypot(tx - ball.x, ty - ball.y);
+  const T = 1.4;
+  kick(p, Math.atan2(ty - ball.y, tx - ball.x), (d / T) * 1.08, (GRAVIDADE * T) / 2);
+}
+
 function switchPlayer(team) {
   const cur = human[team];
   let best = null, bestD = Infinity;
@@ -408,7 +476,7 @@ function aiTarget(p) {
     const goalX = setPiece.team === 0 ? W : 0;
     const atk = p.team === setPiece.team;
     const fundo = (atk ? 75 : 45) + (p.slot % 2) * 45;
-    return { x: goalX - attackDir(setPiece.team) * fundo, y: H / 2 + (p.slot - 2.5) * 45 + (atk ? 15 : -15) };
+    return { x: goalX - attackDir(setPiece.team) * fundo, y: H / 2 + ((p.slot % 6) - 2.5) * 42 + (atk ? 15 : -15) };
   }
   // A equipa sobe quando ataca e desce quando defende, e segue a bola
   let x = b.x + (ball.x - W / 2) * 0.55 + (hasBall ? 90 : -40) * dir;
@@ -451,7 +519,12 @@ function updateGoalkeeper(p, dt) {
     // Segura a bola um bocadinho e depois passa
     p.vx *= 0.8; p.vy *= 0.8;
     p.facing = p.team === 0 ? 0 : Math.PI;
-    if (p.holdTime > 0.8) pass(p);
+    if (p.holdTime > 0.8) {
+      // Com adversários perto, chuta para longe pelo ar; sem ninguém perto, passa rasteiro
+      const apertado = players.some(q => q.team !== p.team && dist(q, p) < 150);
+      if (apertado) chutoLongo(p);
+      else pass(p);
+    }
     return;
   }
   const ballNear = Math.abs(ball.x - goalX) < 150 && !ball.owner &&
@@ -479,7 +552,7 @@ function updateAI(p, dt) {
   let target = aiTarget(p);
   // Um colega ajuda a pressionar se o adversário tem a bola no nosso meio-campo
   const inOwnHalf = p.team === 0 ? ball.x < W * 0.55 : ball.x > W * 0.45;
-  if (teamWithBall() !== p.team && chaser(p.team) === p && inOwnHalf &&
+  if (state !== 'parada' && teamWithBall() !== p.team && chaser(p.team) === p && inOwnHalf &&
       dist(p, ball) < dist(human[p.team], ball)) {
     target = { x: ball.x, y: ball.y };
   }
@@ -517,7 +590,13 @@ function updateHuman(p, t, dt) {
       else shoot(p, charge[t]);
       charging[t] = false; charge[t] = 0;
     }
-    if (pressed.has(k.b1)) pass(p);
+    if (pressed.has(k.b1)) { aPassar[t] = true; cargaPasse[t] = 0; }
+    if (aPassar[t]) cargaPasse[t] += dt;
+    if (released.has(k.b1) && aPassar[t]) {
+      if (cargaPasse[t] > 0.22) passeAlto(p, Math.min(1, (cargaPasse[t] - 0.22) / 0.8));
+      else pass(p);
+      aPassar[t] = false; cargaPasse[t] = 0;
+    }
     return;
   }
 
@@ -528,7 +607,7 @@ function updateHuman(p, t, dt) {
   // (assim dá para rematar de primeira quando a bola está a chegar)
   if (pressed.has(k.b2)) {
     const adversario = ball.owner && ball.owner.team !== p.team;
-    if (!temBola && adversario && p.perdeuBola <= 0) {
+    if (!temBola && adversario && p.perdeuBola <= 0 && !ball.owner.gk) {
       p.slide = 0.35; p.slideDir = len ? Math.atan2(dy, dx) : p.facing;
       p.facing = p.mira = p.slideDir; p.slideDone = false;
       return;
@@ -555,6 +634,15 @@ function updateHuman(p, t, dt) {
     if (p.corrida > 1) psAtivo(p);
   } else p.corrida = 0;
 
+  // Botão 3: finta
+  if (pressed.has(k.b3)) fazerFinta(p, dx, dy);
+  if (p.finta > 0.15) {
+    const lx = -Math.sin(p.facing) * p.fintaLado, ly = Math.cos(p.facing) * p.fintaLado;
+    p.vx += lx * 260 * dt * 6; p.vy += ly * 260 * dt * 6;
+    const v = Math.hypot(p.vx, p.vy), max = speed * 1.05;
+    if (v > max) { p.vx *= max / v; p.vy *= max / v; }
+  }
+
   // Larga o botão 2 para rematar
   if (charging[t]) charge[t] = Math.min(1, charge[t] + dt / 1.1);
   if (released.has(k.b2) && charging[t]) {
@@ -567,11 +655,37 @@ function updateHuman(p, t, dt) {
     if (canTouchBall(p)) { shoot(p, p.pendente.forca); p.pendente = null; }
     else if (p.pendente.t <= 0 || (ball.owner && ball.owner !== p)) p.pendente = null;
   }
-  // Botão 1: com bola = passar; sem bola = mudar de jogador
+  // Botão 1: com bola = passar (toque = rasteiro, segurar = alto); sem bola = mudar de jogador
   if (pressed.has(k.b1)) {
-    if (temBola) pass(p);
+    if (temBola) { aPassar[t] = true; cargaPasse[t] = 0; }
     else switchPlayer(t);
   }
+  if (aPassar[t]) cargaPasse[t] += dt;
+  if (released.has(k.b1) && aPassar[t]) {
+    if (canTouchBall(p)) {
+      if (cargaPasse[t] > 0.22) passeAlto(p, Math.min(1, (cargaPasse[t] - 0.22) / 0.8));
+      else pass(p);
+    }
+    aPassar[t] = false; cargaPasse[t] = 0;
+  }
+}
+
+// ---------- Finta (roleta) ----------
+// O jogador roda com a bola e sai para o lado; quem o marca pode ficar desequilibrado.
+// Durante a finta não lhe tiram a bola (nem com carrinho).
+function fazerFinta(p, dx, dy) {
+  if (ball.owner !== p || p.finta > 0) return;
+  let lado;
+  if (dx || dy) lado = Math.sin(Math.atan2(dy, dx) - p.facing) >= 0 ? 1 : -1;
+  else lado = p.fintaLado = -p.fintaLado;
+  p.finta = 0.4;
+  p.fintaLado = lado;
+  let enganou = false;
+  for (const q of players) {
+    if (q.team === p.team || q.gk || dist(q, p) > 50) continue;
+    if (Math.random() < 0.3 + atr(p, 'dri') / 100 * 0.5) { q.stun = 0.7; q.tentativa = 0.7; enganou = true; }
+  }
+  if (enganou && Math.random() < 0.5) Narrador.passe(`Que finta de ${p.chamado}!`);
 }
 
 // ---------- Computador (controla o jogador ativo da equipa do J2) ----------
@@ -644,6 +758,15 @@ function updateCPU(p, dt) {
     const perto = Math.hypot(goalX - ball.x, H / 2 - ball.y) < 400;
     if (setPiece.tipo === 'penalti') return remateCPU(p, 0.45 + Math.random() * 0.4 * nv.mira);
     if (setPiece.tipo === 'livre' && perto) return remateCPU(p, 0.4 + Math.random() * 0.35);
+    if (setPiece.tipo === 'canto') {
+      // Cruza para o colega mais perto da marca de penálti
+      const marca = { x: goalX - attackDir(p.team) * 110, y: H / 2 };
+      const alvo = players.filter(q => q.team === p.team && !q.gk && q !== p)
+        .reduce((a, b) => (dist(b, marca) < dist(a, marca) ? b : a));
+      const d = dist(p, alvo);
+      p.mira = Math.atan2(alvo.y - p.y, alvo.x - p.x);
+      return passeAlto(p, clamp((d - 120) / 380, 0, 1));
+    }
     if (!passeCPU(p)) { p.mira = Math.atan2(H / 2 - ball.y, goalX - ball.x); pass(p); }
     return;
   }
@@ -673,6 +796,7 @@ function updateCPU(p, dt) {
       cpu.decisao = nv.reacao + 0.15;
       const dGolo = Math.hypot(goalX - p.x, H / 2 - p.y);
       if (dGolo < nv.remataDe && angDiff(p.facing, paraGolo) < 1.1) return remateCPU(p);
+      if (dmin < 45 && p.finta <= 0 && Math.random() < 0.15 + nv.mira * 0.3) { fazerFinta(p, 0, 0); return; }
       if (dmin < 38 && Math.random() < 0.65 && passeCPU(p)) return;
       if (Math.random() < 0.06) passeCPU(p);
     }
@@ -740,6 +864,11 @@ function updateSlide(p, dt) {
 
   const owner = ball.owner;
   // Acertou no adversário que tem a bola?
+  if (owner && owner.gk) return;   // ninguém pode ir ao guarda-redes com a bola nas mãos
+  if (owner && owner.team !== p.team && owner.finta > 0 && dist(p, owner) < PLAYER_R * 2 + 2) {
+    p.slideDone = true;   // fintado: o carrinho passa ao lado
+    return;
+  }
   if (owner && owner.team !== p.team && dist(p, owner) < PLAYER_R * 2 + 2 && ball.z < 10) {
     const porTras = angDiff(p.slideDir, owner.facing) < 1.0;
     const tocaBola = dist(p, ball) < PLAYER_R + BALL_R + (p.ps === 'Carrinho' ? 11 : 6);
@@ -884,8 +1013,39 @@ function comecarSaida() {
 }
 
 // Os adversários têm de ficar longe da bola até ela ser batida
+// (e do guarda-redes quando ele tem a bola nas mãos: não se pode atacar o GR)
 function keepAway() {
+  const gr = ball.owner && ball.owner.gk ? ball.owner : null;
+  if (gr) {
+    for (const p of players) {
+      if (p.team === gr.team) continue;
+      const d = dist(p, gr);
+      if (d < 80 && d > 0) {
+        p.x = gr.x + (p.x - gr.x) / d * 80;
+        p.y = gr.y + (p.y - gr.y) / d * 80;
+      }
+    }
+  }
   if (!setPiece) return;
+  // Livres, lançamentos e cantos: ninguém mesmo à frente da bola nem colado a ela
+  const t = setPiece.taker;
+  if (state === 'parada' && t && ['livre', 'lateral', 'canto'].includes(setPiece.tipo)) {
+    const fx = Math.cos(t.facing), fy = Math.sin(t.facing);
+    for (const p of players) {
+      if (p === t || p.gk || (setPiece.barreira && setPiece.barreira.includes(p))) continue;
+      let rx = p.x - ball.x, ry = p.y - ball.y;
+      const frente = rx * fx + ry * fy;          // distância para a frente da bola
+      const lado = -rx * fy + ry * fx;           // distância para o lado
+      if (frente > -5 && frente < 70 && Math.abs(lado) < 24) {
+        const s = lado >= 0 ? 1 : -1;
+        p.x = ball.x + fx * frente - fy * 24 * s;
+        p.y = ball.y + fy * frente + fx * 24 * s;
+        rx = p.x - ball.x; ry = p.y - ball.y;
+      }
+      const d = Math.hypot(rx, ry);
+      if (d < 40 && d > 0) { p.x = ball.x + rx / d * 40; p.y = ball.y + ry / d * 40; }
+    }
+  }
   const min = setPiece.tipo === 'penalti' ? 0 : 70;
   for (const p of players) {
     if (p.team === setPiece.team || p.gk) continue;
@@ -990,6 +1150,14 @@ function handlePossession() {
     const d = dist(p, ball);
     // Bola alta à altura da cabeça: cabeceamento
     if (!ball.owner && !p.gk && ball.z > 12 && ball.z < 30 && d < PLAYER_R + 9 && ball.lastTouch !== p) {
+      const passeDeColega = ball.lastTouch && ball.lastTouch.team === p.team && !ball.remate;
+      const pertoDaBaliza = Math.abs((p.team === 0 ? W : 0) - p.x) < 300 && Math.abs(p.y - H / 2) < 200;
+      if (passeDeColega && !pertoDaBaliza && ballSpeed < 520 && p.cooldown <= 0) {
+        // Domina a bola com o peito
+        ball.owner = p; p.holdTime = 0; ball.lastTouch = p; ball.curva = 0; ball.z = 0; ball.vz = 0;
+        Narrador.passe(p.chamado);
+        continue;
+      }
       cabecear(p);
       continue;
     }
@@ -1015,19 +1183,22 @@ function handlePossession() {
     // O GR tenta defender a bola que lhe passa perto OU um remate à baliza ao alcance do mergulho
     const linhaGolo = p.team === 0 ? 0 : W;
     const vaiParaBaliza = (linhaGolo - ball.x) * ball.vx > 0;
-    const alcanceMergulho = vaiParaBaliza && ballSpeed >= 220 &&
+    // O mergulho é só para remates; cruzamentos e passes o GR só agarra se lhe passarem perto
+    const alcanceMergulho = ball.remate && vaiParaBaliza && ballSpeed >= 220 &&
       Math.abs(ball.x - p.x) < 22 && Math.abs(ball.y - p.y) < (p.ps === 'Reflexos' ? 92 : 85);
-    if (p.gk && !ball.owner && p.gkShot !== shotId && (d < PLAYER_R + 30 || alcanceMergulho)) {
+    const alcanceMaos = ball.remate ? PLAYER_R + 30 : PLAYER_R + 18;   // cruzamentos: só os que passam perto
+    if (p.gk && !ball.owner && p.gkShot !== shotId && (d < alcanceMaos || alcanceMergulho)) {
       // Regra do Guilherme: o GR defende se o remate não for potente nem colocado
       p.gkShot = shotId;
       const lado = ball.y - p.y;
-      if (ballSpeed > 250 && Math.abs(lado) > 8) {
+      if (ball.remate && ballSpeed > 250 && Math.abs(lado) > 8) {
         // Atira-se para o lado da bola
         p.mergulho = 0.7; p.mergulhoDir = Math.sign(lado);
         p.vy = Math.sign(lado) * (p.ps === 'Reflexos' ? 280 : 230); p.vx = 0;
       }
       let chance;
       if (ballSpeed < (ball.remate ? 200 : 350)) chance = 1;
+      if (!ball.remate) chance = ball.z > 20 ? 0.8 : 1;   // cruzamento alto às vezes escapa das mãos
       else if (ball.potente && ball.colocado) chance = 0.1;
       else if (ball.potente || ball.colocado) chance = 0.35;
       else chance = 0.95;
@@ -1035,7 +1206,7 @@ function handlePossession() {
       if (p.ps === 'Reflexos' && ballSpeed >= 350) chance = Math.min(1, chance + 0.05);
       if (ballSpeed >= 200) chance = clamp(chance + (atr(p, 'ref') - 86) / 100, 0, 1);
       const r = Math.random();
-      if (r < chance && Math.abs(lado) > 34 && ballSpeed >= 250) {
+      if (r < chance && ball.remate && Math.abs(lado) > 34 && ballSpeed >= 250) {
         // Defesa a mergulhar: longe do corpo não dá para agarrar, desvia a bola para fora
         ball.vx = -Math.sign(ball.vx) * (60 + Math.random() * 90);
         ball.vy = Math.sign(lado) * (220 + Math.random() * 160);
@@ -1069,7 +1240,7 @@ function handlePossession() {
       ball.owner = p; p.holdTime = 0; ball.lastTouch = p; ball.curva = 0;
       if (corta && deQuem && deQuem.team !== p.team && ballSpeed > 380) psAtivo(p);
       if (deQuem && deQuem !== p && deQuem.team === p.team && !p.gk) Narrador.passe(p.chamado);
-    } else if (ball.owner && ball.owner.team !== p.team && !ball.owner.gk &&
+    } else if (ball.owner && ball.owner.team !== p.team && !ball.owner.gk && ball.owner.finta <= 0 &&
                d < PLAYER_R + BALL_R + 3 && p.tentativa <= 0) {
       // Tentativa de roubar a bola encostando: nem sempre resulta
       p.tentativa = 0.5;
@@ -1138,6 +1309,8 @@ function update(dt) {
       modoJogo = 'cpu';
     }
     if (pressed.has('Digit2') || pressed.has('Numpad2')) modoJogo = '2j';
+    if (pressed.has('Digit3') || pressed.has('Numpad3')) numJogadores = 5;
+    if (pressed.has('Digit4') || pressed.has('Numpad4')) numJogadores = 11;
     if (pressed.has('KeyW')) mudarEquipa(0, -1);
     if (pressed.has('KeyS')) mudarEquipa(0, 1);
     if (pressed.has('ArrowUp')) mudarEquipa(1, -1);
@@ -1190,6 +1363,7 @@ function update(dt) {
     p.perdeuBola = Math.max(0, p.perdeuBola - dt);
     p.cabeceou = Math.max(0, p.cabeceou - dt);
     p.psCd = Math.max(0, p.psCd - dt);
+    p.finta = Math.max(0, p.finta - dt);
     p.tentativa = Math.max(0, p.tentativa - dt);
     if (ball.owner === p) p.holdTime += dt;
     const t = human.indexOf(p);
@@ -1251,6 +1425,7 @@ function gravar(dt) {
     jogadores: players.map(p => ({
       ref: p, x: p.x, y: p.y, facing: p.facing, vx: p.vx, vy: p.vy, slide: p.slide, chao: p.chao,
       cooldown: p.cooldown, mergulho: p.mergulho, mergulhoDir: p.mergulhoDir, team: p.team, cabeceou: p.cabeceou,
+      finta: p.finta, fintaLado: p.fintaLado,
     })),
     arbitros: arbitros.map(a => ({ ...a, ref: a })),
   });

@@ -12,10 +12,12 @@ Jogo de futebol 3D para 2 jogadores no mesmo teclado, inspirado no FC 26.
 | Ação | J1 | J2 |
 |------|---------------|-------------|
 | Andar | W A S D | Setas |
-| Com bola: passar · Sem bola: mudar de jogador | F | K |
+| Com bola: passar (segurar = passe alto) · Sem bola: mudar de jogador | F | K |
 | Com bola: rematar (segurar = força) · Sem bola: carrinho | G | L |
+| Com bola: finta (roleta) | H | Ç |
 
-No ecrã inicial: **1** joga contra o computador (carregar outra vez muda o nível), **2** joga a dois.
+No ecrã inicial: **1** joga contra o computador (carregar outra vez muda o nível), **2** joga a dois,
+**3** 5 contra 5, **4** 11 contra 11.
 **W/S** muda a equipa do J1, **↑/↓** a equipa do J2, **← →** o estádio. Durante o jogo, **N** liga/desliga o narrador
 e **ESPAÇO** salta a repetição do golo.
 
