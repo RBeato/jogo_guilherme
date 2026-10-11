@@ -4,6 +4,7 @@ const Hud = (() => {
   const canvas = document.getElementById('hud');
   const ctx = canvas.getContext('2d');
   const COR_J = ['#ffd60a', '#4cc9f0'];
+  const etiqueta = t => (eCPU(t) ? 'CPU' : `J${t + 1}`);
   let s = 1;   // escala (pixels do ecrã)
 
   function redimensionar() {
@@ -173,7 +174,7 @@ const Hud = (() => {
     caixa(x, y, w, h, 'rgba(8,12,28,0.9)', 8);
     ctx.fillStyle = COR_J[t];
     ctx.fillRect(x, y, 6 * s, h);
-    texto(`J${t + 1}`, x + 14 * s, y + 18 * s, 12, COR_J[t], 'left', '900');
+    texto(etiqueta(t), x + 14 * s, y + 18 * s, 12, COR_J[t], 'left', '900');
     // Carta dourada com a classificação
     cartaFC(x + 14 * s, y + 22 * s, 34 * s, 44 * s, p, false);
     // Nome em destaque (encolhe se for comprido)
@@ -250,7 +251,7 @@ const Hud = (() => {
       if (!p || state === 'golo' || state === 'fim') continue;
       const c = Render.noEcra(p.x, p.y, 36, canvas.width, canvas.height);
       if (c.visivel) {
-        texto(`J${t + 1}`, c.x, c.y, 14, COR_J[t], 'center', '900');
+        texto(etiqueta(t), c.x, c.y, 14, COR_J[t], 'center', '900');
         if (charging[t]) {
           const pe = Render.noEcra(p.x, p.y, 0, canvas.width, canvas.height);
           const bw = 46 * s, bh = 8 * s;
@@ -289,7 +290,7 @@ const Hud = (() => {
   }
 
   function dicaBolaParada() {
-    if (state !== 'parada' || !setPiece || !setPiece.taker || setPiece.taker.gk) return;
+    if (state !== 'parada' || !setPiece || !setPiece.taker || setPiece.taker.gk || eCPU(setPiece.team)) return;
     const t = setPiece.team;
     const k = t === 0 ? 'W A S D apontar · F passar · G rematar' : 'Setas apontar · K passar · L rematar';
     // Dica em cima (por baixo do aviso do árbitro), para não tapar a jogada
@@ -333,9 +334,20 @@ const Hud = (() => {
     ctx.font = `900 ${18 * s}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillStyle = COR_J[t];
-    ctx.fillText(`J${t + 1} · ${eq.nome}`, x + 42 * s, y + 36 * s, w - 150 * s);
+    ctx.fillText(`${etiqueta(t)} · ${eq.nome}`, x + 42 * s, y + 36 * s, w - 150 * s);
     texto(t === 0 ? '▲ W  ▼ S' : '▲ ↑  ▼ ↓', x + w - 18 * s, y + 30 * s, 12, '#ffd60a', 'right', '900');
     texto(eq.alternativo ? `${eq.grupo} · equip. alternativo` : eq.grupo, x + w - 18 * s, y + 44 * s, 9, '#9aa6bf', 'right', '600');
+    if (eCPU(t)) {
+      // Contra o computador: este lado não tem teclas, mostra o nível
+      const nv = NIVEIS[nivel];
+      texto('Joga o computador', x + 20 * s, y + 84 * s, 20, '#ffffff', 'left', '900');
+      texto(`Nível: ${nv.nome}`, x + 20 * s, y + 116 * s, 16, COR_J[t], 'left', '800');
+      NIVEIS.forEach((n, i) => {
+        caixa(x + 20 * s + i * 34 * s, y + 130 * s, 26 * s, 10 * s, i <= nivel ? COR_J[t] : 'rgba(255,255,255,0.15)', 3);
+      });
+      texto('Carrega 1 outra vez para mudar o nível', x + 20 * s, y + 172 * s, 13, '#9aa6bf', 'left', '600');
+      return;
+    }
     const k = TECLAS[t];
     const nome = c => c.replace('Key', '').replace('Arrow', '').replace('Up', '↑').replace('Down', '↓').replace('Left', '←').replace('Right', '→');
     let cx = x + 20 * s;
@@ -361,7 +373,7 @@ const Hud = (() => {
     ctx.shadowBlur = 24 * s;
     texto('FUTEBOL 26', canvas.width / 2, canvas.height * 0.2, 84, '#ffffff', 'center', '900');
     ctx.restore();
-    texto(`${EQUIPAS[0].nome}  vs  ${EQUIPAS[1].nome}  ·  2 jogadores  ·  primeiro a ${GOLS_PARA_GANHAR} golos`,
+    texto(`${EQUIPAS[0].nome}  vs  ${EQUIPAS[1].nome}  ·  ${modoJogo === 'cpu' ? 'contra o computador' : '2 jogadores'}  ·  primeiro a ${GOLS_PARA_GANHAR} golos`,
       canvas.width / 2, canvas.height * 0.2 + 42 * s, 17, '#9fe0a6', 'center', '700');
     // Escolha do estádio
     const est = Render.estadio;
@@ -383,10 +395,24 @@ const Hud = (() => {
         iconePS(j.ps, x0 + i * 72 * s + 50 * s, y + 222 * s + 52 * s, 9 * s);
       });
     }
+    // Modo de jogo: tecla 1 contra o computador, tecla 2 dois jogadores
+    const my = y + 324 * s;
+    const opcoes = [
+      ['1', `CONTRA O COMPUTADOR · ${NIVEIS[nivel].nome.toUpperCase()}`, modoJogo === 'cpu'],
+      ['2', '2 JOGADORES', modoJogo === '2j'],
+    ];
+    opcoes.forEach(([tec, txt, ativo], i) => {
+      const bw = 330 * s, bx = canvas.width / 2 + (i === 0 ? -bw - 10 * s : 10 * s);
+      caixa(bx, my, bw, 40 * s, ativo ? 'rgba(255,214,10,0.95)' : 'rgba(8,12,28,0.85)', 8);
+      if (!ativo) { ctx.strokeStyle = 'rgba(255,214,10,0.5)'; ctx.lineWidth = 1.5 * s; ctx.stroke(); }
+      caixa(bx + 10 * s, my + 8 * s, 24 * s, 24 * s, ativo ? '#0b1020' : '#f1f3f8', 5);
+      texto(tec, bx + 22 * s, my + 26 * s, 15, ativo ? '#ffd60a' : '#111', 'center', '900');
+      texto(txt, bx + 44 * s, my + 26 * s, 15, ativo ? '#0b1020' : '#ffffff', 'left', '900');
+    });
     texto(Narrador.disponivel ? `Narrador: ${Narrador.ligado ? 'ligado' : 'desligado'} (tecla N)` :
-      'Narrador: este computador não tem voz em português', canvas.width / 2, canvas.height * 0.9 + 26 * s, 13, '#9aa6bf', 'center', '600');
+      'Narrador: este computador não tem voz em português', canvas.width - 16 * s, 24 * s, 12, '#9aa6bf', 'right', '600');
     if (Math.floor(performance.now() / 500) % 2 === 0) {
-      texto('Carrega ESPAÇO para começar', canvas.width / 2, canvas.height * 0.85, 24, '#ffd60a', 'center', '900');
+      texto('Carrega ESPAÇO para começar', canvas.width / 2, my + 80 * s, 24, '#ffd60a', 'center', '900');
     }
   }
 

@@ -15,6 +15,12 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
   - quantos golos para ganhar (**primeiro a 3, 5 ou 7**)
   - fora de jogo: **ligado / desligado**
 
+## 1b. Modos de jogo (já feitos)
+
+- **Tecla 1: contra o computador.** O J1 joga com W A S D + F/G; o computador controla a equipa do J2.
+  Carregar 1 outra vez muda o nível: **Fácil, Médio, Difícil** (velocidade, tempo de reação e pontaria).
+- **Tecla 2: 2 jogadores** no mesmo teclado.
+
 ## 2. Controlos (só 2 botões — decidido pelo Guilherme)
 
 | Ação                         | Jogador 1 | Jogador 2 |
@@ -27,6 +33,9 @@ Corre no browser (Chrome, Edge, Firefox) — basta abrir o ficheiro, não é pre
 - O botão 2 só faz carrinho quando é o **adversário** que tem a bola. Com a bola solta ou com
   um colega, carrega o remate — dá para **rematar de primeira** quando a bola chega.
 - O **guarda-redes é sempre controlado pelo computador**.
+- A força depende da distância (decisão do Guilherme): **muito perto** com força a mais a bola
+  pode ir por cima da trave (~35%) ou dar golo; **de longe** chega fraca e o GR agarra;
+  **de muito longe** pára antes da baliza.
 - Força dos remates reduzida a pedido do Guilherme (o remate mais forte tem ~2/3 da força antiga)
   e a barra de força demora mais a encher.
 - Nos **livres e penáltis** a câmara fica **atrás de quem bate**, a olhar para a baliza.

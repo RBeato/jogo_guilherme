@@ -15,7 +15,8 @@ Jogo de futebol 3D para 2 jogadores no mesmo teclado, inspirado no FC 26.
 | Com bola: passar · Sem bola: mudar de jogador | F | K |
 | Com bola: rematar (segurar = força) · Sem bola: carrinho | G | L |
 
-No ecrã inicial: **W/S** muda a equipa do J1, **↑/↓** a equipa do J2, **← →** o estádio. Durante o jogo, **N** liga/desliga o narrador
+No ecrã inicial: **1** joga contra o computador (carregar outra vez muda o nível), **2** joga a dois.
+**W/S** muda a equipa do J1, **↑/↓** a equipa do J2, **← →** o estádio. Durante o jogo, **N** liga/desliga o narrador
 e **ESPAÇO** salta a repetição do golo.
 
 Nas bolas paradas quem marca não anda: usa as teclas de andar para apontar

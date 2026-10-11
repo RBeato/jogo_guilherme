@@ -42,6 +42,18 @@ addEventListener('keyup', e => {
 addEventListener('blur', () => down.clear());
 
 // ---------- Equipas ----------
+// ---------- Modo de jogo ----------
+// '2j' = dois jogadores no mesmo teclado; 'cpu' = J1 contra o computador (que joga com a equipa do J2)
+let modoJogo = '2j';
+let nivel = 1;
+const NIVEIS = [
+  { nome: 'Fácil', vel: 0.86, reacao: 0.45, mira: 0.55, carrinho: 0.15, remataDe: 220 },
+  { nome: 'Médio', vel: 0.97, reacao: 0.25, mira: 0.75, carrinho: 0.35, remataDe: 270 },
+  { nome: 'Difícil', vel: 1.05, reacao: 0.1, mira: 0.95, carrinho: 0.6, remataDe: 320 },
+];
+const cpu = { decisao: 0, trocar: 0, espera: 0 };
+const eCPU = t => modoJogo === 'cpu' && t === 1;
+
 // As duas equipas em jogo (escolhidas no ecrã inicial; as listas estão em equipas.js)
 const escolhaEquipa = [0, 1];
 const EQUIPAS = [TODAS_EQUIPAS[0], TODAS_EQUIPAS[1]];
@@ -286,7 +298,10 @@ function shoot(p, power) {
   const finesse = p.ps === 'Remate Colocado';
   const potentePS = p.ps === 'Remate Potente';
   // Força do remate (o Guilherme achou que estava forte demais: o máximo passou de ~1000 para ~650)
-  const velocidade = (300 + power * 330) * (potentePS ? 1.1 : 1) * (0.9 + atr(p, 'rem') / 100 * 0.12);
+  let velocidade = (300 + power * 330) * (potentePS ? 1.1 : 1) * (0.9 + atr(p, 'rem') / 100 * 0.12);
+  // Distância à baliza: de longe a bola chega fraca (ou nem chega); de perto, força a mais pode ir por cima
+  const dBaliza = Math.hypot(goalX - ball.x, H / 2 - ball.y);
+  velocidade *= clamp(1.1 - Math.max(0, dBaliza - 300) / 900, 0.6, 1);
   // Virado para a baliza: na diagonal remata para um canto, a direito remata ao meio
   if (angDiff(f, toGoal) < Math.PI / 3 && Math.abs(goalX - p.x) < 450) {
     const vert = Math.sin(f);
@@ -309,9 +324,7 @@ function shoot(p, power) {
   // Pontaria: remates no máximo da força falham mais (o Remate Potente não)
   const erro = potentePS ? 0.03 : finesse && colocado ? 0.02 : power > 0.85 ? 0.1 : 0.05;
   angle += (Math.random() - 0.5) * erro * (1.6 - atr(p, 'rem') / 100);
-  const lift = potentePS ? 35 + power * 90 : curva ? 90 + power * 100 : 60 + power * 150;
-  const goalXL = p.team === 0 ? W : 0;
-  if (deLivre && Math.hypot(goalXL - ball.x, H / 2 - ball.y) < 420) {
+  if (deLivre && dBaliza < 420) {
     // Livre direto: altura certa para passar por cima das cabeças da barreira
     // (que alcançam a bola a uns 55 de distância) e efeito para baixo (cai a pique)
     const tBarreira = 55 / velocidade;
@@ -321,7 +334,16 @@ function shoot(p, power) {
     kick(p, angle, velocidade, vz);
     ball.dip = 600;
   } else {
-    kick(p, angle, velocidade, lift + Math.random() * 25);
+    let lift = (potentePS ? 35 + power * 90 : curva ? 90 + power * 100 : 60 + power * 150) + Math.random() * 25;
+    if (dBaliza < 220 && power > 0.75) {
+      // Muito perto e com força a mais: às vezes vai por cima da trave
+      const chancePorCima = (power - 0.75) * 1.6 * (potentePS ? 0.5 : 1);
+      if (Math.random() < chancePorCima) {
+        const t = dBaliza / velocidade;
+        lift = (GOAL_H + 20 + Math.random() * 30 + (GRAVIDADE / 2) * t * t) / t;
+      }
+    }
+    kick(p, angle, velocidade, lift);
   }
   ball.curva = curva;
   ball.ps = p.ps;
@@ -548,6 +570,150 @@ function updateHuman(p, t, dt) {
   }
 }
 
+// ---------- Computador (controla o jogador ativo da equipa do J2) ----------
+function velocidadeCPU(p) {
+  let v = (ball.owner === p ? 160 : 175) * (0.86 + atr(p, 'rit') / 100 * 0.25) * NIVEIS[nivel].vel;
+  if (p.ps === 'Rápido') v *= 1.06;
+  if (p.stun > 0) v *= 0.6;
+  return v;
+}
+
+// Corre numa direção (vira-se aos poucos, como os humanos)
+function correrPara(p, ang, vel, dt) {
+  p.mira = ang;
+  p.facing = rodarPara(p.facing, ang, (ball.owner === p ? 8 : 13) * dt);
+  p.vx += (Math.cos(p.facing) * vel - p.vx) * Math.min(1, dt * 7);
+  p.vy += (Math.sin(p.facing) * vel - p.vy) * Math.min(1, dt * 7);
+}
+
+// Escolhe o colega mais bem colocado (mais à frente e sem adversários no caminho) e passa-lhe
+function passeCPU(p) {
+  const goalX = p.team === 0 ? W : 0;
+  let melhor = null, nota = -Infinity;
+  for (const m of players) {
+    if (m.team !== p.team || m === p || m.gk) continue;
+    const d = dist(p, m);
+    if (d < 50 || d > 420) continue;
+    let livre = 1;
+    for (const a of players) {
+      if (a.team === p.team) continue;
+      // distância do adversário à linha do passe
+      const t = clamp(((a.x - p.x) * (m.x - p.x) + (a.y - p.y) * (m.y - p.y)) / (d * d), 0, 1);
+      const px = p.x + (m.x - p.x) * t, py = p.y + (m.y - p.y) * t;
+      if (Math.hypot(a.x - px, a.y - py) < 26) livre = 0.2;
+    }
+    const avanco = (Math.abs(goalX - p.x) - Math.abs(goalX - m.x)) / 100;
+    const n = livre * 3 + avanco - d / 400 + Math.random() * 0.5;
+    if (n > nota) { nota = n; melhor = m; }
+  }
+  if (!melhor) return false;
+  p.mira = Math.atan2(melhor.y - p.y, melhor.x - p.x);
+  pass(p);
+  return true;
+}
+
+// Remata para o canto mais longe do guarda-redes
+function remateCPU(p, forcaBase) {
+  const nv = NIVEIS[nivel];
+  const goalX = p.team === 0 ? W : 0;
+  const gr = players.find(q => q.gk && q.team !== p.team);
+  const lado = gr && gr.y > H / 2 ? -1 : 1;
+  const colocado = Math.random() < nv.mira;
+  const base = goalX > p.x ? 0 : Math.PI;
+  p.mira = colocado ? base + (base === 0 ? lado * 0.6 : -lado * 0.6) : Math.atan2(H / 2 - p.y, goalX - p.x);
+  const forca = forcaBase !== undefined ? forcaBase
+    : colocado ? 0.35 + Math.random() * 0.5 * nv.mira : 0.55 + Math.random() * 0.45;
+  shoot(p, forca);
+}
+
+function updateCPU(p, dt) {
+  const nv = NIVEIS[nivel];
+  const goalX = p.team === 0 ? W : 0;
+  const nossaBaliza = W - goalX;
+
+  // Bolas paradas: espera um bocadinho e bate
+  if (state === 'parada' && setPiece && setPiece.taker === p) {
+    p.vx = p.vy = 0;
+    cpu.espera += dt;
+    if (cpu.espera < 1.0 + nv.reacao) return;
+    cpu.espera = 0;
+    const perto = Math.hypot(goalX - ball.x, H / 2 - ball.y) < 400;
+    if (setPiece.tipo === 'penalti') return remateCPU(p, 0.45 + Math.random() * 0.4 * nv.mira);
+    if (setPiece.tipo === 'livre' && perto) return remateCPU(p, 0.4 + Math.random() * 0.35);
+    if (!passeCPU(p)) { p.mira = Math.atan2(H / 2 - ball.y, goalX - ball.x); pass(p); }
+    return;
+  }
+  if (p.slide > 0 || p.chao > 0) return;
+  const vel = velocidadeCPU(p);
+
+  // Com a bola: avança para a baliza, foge de quem está à frente, passa ou remata
+  if (ball.owner === p) {
+    const paraGolo = Math.atan2(H / 2 - p.y, goalX - p.x);
+    let ang = paraGolo;
+    let perto = null, dmin = Infinity;
+    for (const a of players) {
+      if (a.team === p.team) continue;
+      const d = dist(a, p);
+      if (d < dmin) { dmin = d; perto = a; }
+    }
+    if (perto && dmin < 75) {
+      const angAdv = Math.atan2(perto.y - p.y, perto.x - p.x);
+      if (angDiff(angAdv, ang) < 1.1) ang += (Math.sin(ang - angAdv) >= 0 ? 1 : -1) * 0.9;
+    }
+    // Não fugir pela linha lateral
+    if (p.y < 50) ang = rodarPara(ang, Math.PI / 2, 0.6);
+    if (p.y > H - 50) ang = rodarPara(ang, -Math.PI / 2, 0.6);
+    correrPara(p, ang, vel, dt);
+    cpu.decisao -= dt;
+    if (cpu.decisao <= 0) {
+      cpu.decisao = nv.reacao + 0.15;
+      const dGolo = Math.hypot(goalX - p.x, H / 2 - p.y);
+      if (dGolo < nv.remataDe && angDiff(p.facing, paraGolo) < 1.1) return remateCPU(p);
+      if (dmin < 38 && Math.random() < 0.65 && passeCPU(p)) return;
+      if (Math.random() < 0.06) passeCPU(p);
+    }
+    return;
+  }
+
+  // Sem a bola: passa o controlo para o jogador mais perto da bola
+  cpu.trocar -= dt;
+  if (cpu.trocar <= 0 && (!ball.owner || ball.owner.team !== p.team)) {
+    cpu.trocar = 0.4 + nv.reacao;
+    let novo = p, dmin = dist(p, ball);
+    for (const q of players) {
+      if (q.team !== p.team || q.gk) continue;
+      if (dist(q, ball) < dmin - 15) { dmin = dist(q, ball); novo = q; }
+    }
+    if (novo !== p) { human[p.team] = novo; return; }
+  }
+
+  // Um colega (o guarda-redes) tem a bola: ir para o seu lugar
+  if (ball.owner && ball.owner.team === p.team) {
+    const t = aiTarget(p);
+    moveTowards(p, t.x, t.y, vel, dt);
+    if (Math.hypot(p.vx, p.vy) > 20) p.facing = Math.atan2(p.vy, p.vx);
+    return;
+  }
+
+  // Bola solta: vai onde a bola vai estar. Adversário com a bola: fica entre ele e a baliza
+  let alvo = { x: ball.x + ball.vx * 0.3, y: ball.y + ball.vy * 0.3 };
+  const dono = ball.owner;
+  // Longe: corta o caminho para a baliza; perto: vai mesmo à bola para a roubar
+  if (dono && dist(p, ball) > 70) alvo = { x: ball.x + (nossaBaliza - ball.x) * 0.06, y: ball.y + (H / 2 - ball.y) * 0.06 };
+  else if (dono) alvo = { x: ball.x, y: ball.y };
+  correrPara(p, Math.atan2(alvo.y - p.y, alvo.x - p.x), dist(p, alvo) < 6 ? 0 : vel, dt);
+
+  // Carrinho: só de frente ou de lado (por trás é falta), e não dentro da própria área
+  if (dono && dono.team !== p.team && dist(p, dono) < 34 && p.perdeuBola <= 0 &&
+      !inPenaltyBox(p.team, p.x, p.y) && Math.random() < nv.carrinho * dt * 3) {
+    const paraDono = Math.atan2(dono.y - p.y, dono.x - p.x);
+    if (angDiff(paraDono, dono.facing) > 1.4) {
+      p.slide = 0.35; p.slideDir = paraDono;
+      p.facing = p.mira = paraDono; p.slideDone = false;
+    }
+  }
+}
+
 // ---------- Carrinhos e faltas ----------
 function inPenaltyBox(team, x, y) {
   // Grande área que a equipa `team` defende
@@ -696,6 +862,7 @@ function placeSetPiece() {
   if (human[1 - sp.team] && human[1 - sp.team].gk) human[1 - sp.team] = frontPlayer(1 - sp.team);
   keepAway();
   state = 'parada';
+  cpu.espera = 0;
 }
 
 // Os adversários têm de ficar longe da bola até ela ser batida
@@ -948,6 +1115,11 @@ function update(dt) {
     // Setas ← → escolhem o estádio; W/S a equipa do J1; ↑/↓ a equipa do J2
     if (pressed.has('ArrowRight')) Render.mudarEstadio(1);
     if (pressed.has('ArrowLeft')) Render.mudarEstadio(-1);
+    if (pressed.has('Digit1') || pressed.has('Numpad1')) {
+      if (modoJogo === 'cpu') nivel = (nivel + 1) % NIVEIS.length;
+      modoJogo = 'cpu';
+    }
+    if (pressed.has('Digit2') || pressed.has('Numpad2')) modoJogo = '2j';
     if (pressed.has('KeyW')) mudarEquipa(0, -1);
     if (pressed.has('KeyS')) mudarEquipa(0, 1);
     if (pressed.has('ArrowUp')) mudarEquipa(1, -1);
@@ -1005,6 +1177,7 @@ function update(dt) {
     if (ball.owner === p) p.holdTime += dt;
     const t = human.indexOf(p);
     if (p.slide > 0 || p.chao > 0) updateSlide(p, dt);
+    else if (t >= 0 && eCPU(t)) updateCPU(p, dt);
     else if (t >= 0) updateHuman(p, t, dt);
     else updateAI(p, dt);
     if (state === 'apito') return;     // houve falta
