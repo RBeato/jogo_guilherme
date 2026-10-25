@@ -130,6 +130,14 @@ São inspirados nos verdadeiros (cores das cadeiras, telhado, dia/noite), não s
   mais força. Ao acelerar inclinam-se para a frente.
 - Remate: a perna vai atrás enquanto se carrega e depois chuta para a frente.
 
+- **Corpos realistas (MakeHuman):** os jogadores, árbitros e treinadores usam um corpo humano a sério
+  gerado com os dados do MakeHuman (makehuman.org): homem jovem e musculado, em três peles (clara, escura,
+  asiática), com cara, olhos, sobrancelhas, cabelo (curto, rapado, topete, afro) e barba. O equipamento
+  (camisola, calções, meias, botas, luvas do GR) fica um pouco afastado da pele para parecer pano.
+  As animações do jogo mexem bonecos de controlo invisíveis e as rotações são copiadas para 13 ossos.
+  Ficheiros: `modelo_humano.js` (gerado), `ferramentas/makehuman_corpo.py` e `ferramentas/makehuman_jogo.js`.
+  Se `modelo_humano.js` não carregar, o jogo volta aos bonecos simples.
+
 ## 4b. Celebrações e narrador
 
 - Depois de marcar, o jogador corre para a câmara e faz a **sua celebração**; a câmara desce e

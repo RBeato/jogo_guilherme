@@ -672,7 +672,7 @@ const Render = (() => {
 
   // Boneco com proporções de pessoa (cerca de 25 unidades de altura, pernas ~ metade).
   // kit: { camisola, calcoes, meias, pele, cabelo, estilo, barba, numero, corNumero, luvas }
-  function criarBoneco(kit) {
+  function criarBonecoSimples(kit) {
     const raiz = new THREE.Group();
     const corpo = new THREE.Group();
     raiz.add(corpo);
@@ -775,6 +775,198 @@ const Render = (() => {
     raiz.traverse(o => { if (o.isMesh) o.castShadow = sombrasBonecos; });
     scene.add(raiz);
     return { raiz, corpo, cabeca, ancas, joelhos, ombros, cotovelos, fase: Math.random() * 6 };
+  }
+
+  // ---------- Jogadores realistas: corpo do MakeHuman (makehuman.org) com esqueleto ----------
+  // O corpo (gerado por ferramentas/makehuman_*.{py,js}) vem em modelo_humano.js. As animações do jogo
+  // continuam a mexer os "bonecos" invisíveis (corpo, ancas, joelhos, ombros, cotovelos, cabeça) e cada
+  // imagem copiamos essas rotações para os ossos do corpo realista.
+  const ALTURA_JOGADOR = 25;
+  const COR_MEDIA_PELE = { clara: '#dca686', escura: '#4f3223', asiatica: '#c49a81' };
+  const HUMANO = (() => {
+    const M = window.MODELO_HUMANO;
+    if (!M) return null;
+    try {
+      const dec = (s, T) => {
+        const b = atob(s), u = new Uint8Array(b.length);
+        for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i);
+        return new T(u.buffer);
+      };
+      const tex = {};
+      for (const [k, url] of Object.entries(M.texturas)) {
+        const t = new THREE.TextureLoader().load(url);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.anisotropy = 4;
+        tex[k] = t;
+      }
+      const GRUPOS = ['pele', 'rosto', 'camisola', 'calcoes', 'meias', 'botas', 'maos'];
+      const iCab = M.ossos.indexOf('cabeca');
+      const variantes = {};
+      for (const [nome, v] of Object.entries(M.variantes)) {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(dec(v.pos, Float32Array), 3));
+        g.setAttribute('uv', new THREE.BufferAttribute(dec(v.uv, Float32Array), 2));
+        g.setAttribute('skinIndex', new THREE.BufferAttribute(new Uint16Array(dec(v.si, Uint8Array)), 4));
+        g.setAttribute('skinWeight', new THREE.BufferAttribute(dec(v.sw, Uint8Array), 4, true));
+        g.setIndex(new THREE.BufferAttribute(dec(v.idx, v.idx32 ? Uint32Array : Uint16Array), 1));
+        for (const gr of v.grupos) g.addGroup(gr.inicio, gr.total, GRUPOS.indexOf(gr.nome));
+        g.computeVertexNormals();
+        g.computeBoundingBox();
+        const pecas = {};
+        for (const [k, p] of Object.entries(v.pecas)) {
+          const pg = new THREE.BufferGeometry();
+          const pos = dec(p.pos, Float32Array);
+          pg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+          pg.setAttribute('uv', new THREE.BufferAttribute(dec(p.uv, Float32Array), 2));
+          const n = pos.length / 3;
+          const si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+          for (let i = 0; i < n; i++) { si[i * 4] = iCab; sw[i * 4] = 1; }
+          pg.setAttribute('skinIndex', new THREE.BufferAttribute(si, 4));
+          pg.setAttribute('skinWeight', new THREE.BufferAttribute(sw, 4));
+          pg.setIndex(new THREE.BufferAttribute(dec(p.idx, p.idx32 ? Uint32Array : Uint16Array), 1));
+          pg.computeVertexNormals();
+          pecas[k] = pg;
+        }
+        // Para onde está virada a cara (o MakeHuman olha para +Z) e a altura do corpo
+        const bb = g.boundingBox;
+        variantes[nome] = { g, pecas, ossos: v.ossos, minY: bb.min.y, altura: bb.max.y - bb.min.y };
+      }
+      return { variantes, tex, nomesOssos: M.ossos };
+    } catch (e) {
+      console.warn('Corpo realista não carregou, ficam os bonecos simples', e);
+      return null;
+    }
+  })();
+
+  const lumCor = (c) => { const k = new THREE.Color(c); return 0.2126 * k.r + 0.7152 * k.g + 0.0722 * k.b; };
+  const matPeleReal = {};
+  function materialPeleReal(variante, corPele) {
+    const k = variante + corPele;
+    if (!matPeleReal[k]) {
+      // A textura já tem a cor da pele; a cor do jogador ajusta um pouco o tom (só pode escurecer)
+      const alvo = new THREE.Color(corPele), media = new THREE.Color(COR_MEDIA_PELE[variante]);
+      const tom = new THREE.Color(Math.min(1, alvo.r / media.r), Math.min(1, alvo.g / media.g), Math.min(1, alvo.b / media.b));
+      tom.lerp(new THREE.Color('#ffffff'), 0.35);
+      matPeleReal[k] = new THREE.MeshStandardMaterial({ map: HUMANO.tex['pele_' + variante], color: tom, roughness: 0.62 });
+    }
+    return matPeleReal[k];
+  }
+  const matPecas = {};
+  function materialPeca(tipo, cor) {
+    const k = tipo + cor;
+    if (!matPecas[k]) {
+      const olhos = tipo === 'olhos';
+      matPecas[k] = new THREE.MeshStandardMaterial({
+        map: HUMANO.tex[tipo], color: olhos ? '#ffffff' : cor, roughness: olhos ? 0.25 : 0.7,
+        alphaTest: olhos ? 0 : 0.35, side: olhos ? THREE.FrontSide : THREE.DoubleSide,
+      });
+    }
+    return matPecas[k];
+  }
+
+  const EIXO_Y = new THREE.Vector3(0, 1, 0);
+  const RODAR_CORPO = new THREE.Quaternion().setFromAxisAngle(EIXO_Y, Math.PI / 2);   // +Z do MakeHuman → +X do jogo
+  const RODAR_CORPO_INV = RODAR_CORPO.clone().invert();
+  const qTmp = new THREE.Quaternion(), qTmp2 = new THREE.Quaternion(), vTmp = new THREE.Vector3();
+
+  function criarBonecoReal(kit) {
+    // Os "bonecos" de controlo: sem malhas, só para as animações mexerem
+    const m = criarBonecoSimples(kit);
+    m.raiz.traverse(o => { if (o.isMesh) o.visible = false; });
+    // Escolhe a pele: escura, asiática (tons médios) ou clara
+    const lum = lumCor(kit.pele || '#e0ac69');
+    const variante = lum < 0.3 ? 'escura' : lum < 0.5 ? 'asiatica' : 'clara';
+    const V = HUMANO.variantes[variante];
+    const s = ALTURA_JOGADOR / V.altura;
+    const caixa = new THREE.Group();
+    // Ossos (o esqueleto é preparado com a caixa ainda sem tamanho nem rotação, no espaço do próprio corpo)
+    const ossos = V.ossos.map(o => { const b = new THREE.Bone(); b.name = o.nome; return b; });
+    V.ossos.forEach((o, i) => {
+      const b = ossos[i];
+      if (o.pai) {
+        const pi = HUMANO.nomesOssos.indexOf(o.pai);
+        b.position.set(o.pos[0] - V.ossos[pi].pos[0], o.pos[1] - V.ossos[pi].pos[1], o.pos[2] - V.ossos[pi].pos[2]);
+        ossos[pi].add(b);
+      } else {
+        b.position.set(o.pos[0], o.pos[1], o.pos[2]);
+        caixa.add(b);
+      }
+    });
+    const ancaRepouso = ossos[0].position.clone();
+    caixa.updateMatrixWorld(true);
+    const esqueleto = new THREE.Skeleton(ossos);
+    caixa.scale.setScalar(s);
+    caixa.quaternion.copy(RODAR_CORPO);
+    caixa.position.y = -V.minY * s;
+    const pele = materialPeleReal(variante, kit.pele || '#e0ac69');
+    const mats = [pele, pele, tecido(kit.camisola), tecido(kit.calcoes), tecido(kit.meias),
+      matDe(kit.botas || '#111111'), kit.luvas ? tecido(kit.luvas) : pele];
+    const malhas = [];
+    const corpoMalha = new THREE.SkinnedMesh(V.g, mats);
+    malhas.push(corpoMalha);
+    const estilo = kit.estilo || 'curto';
+    const pecas = ['olhos', 'sobrancelhas', estilo === 'rapado' ? 'rapado' : estilo];
+    if (kit.barba) pecas.push('barba');
+    for (const k of pecas) {
+      if (!V.pecas[k]) continue;
+      malhas.push(new THREE.SkinnedMesh(V.pecas[k], materialPeca(k, kit.cabelo || '#1b1209')));
+    }
+    for (const mm of malhas) {
+      mm.bind(esqueleto, new THREE.Matrix4());
+      mm.castShadow = sombrasBonecos;
+      mm.frustumCulled = false;
+      caixa.add(mm);
+    }
+    // Número e nome nas costas, presos ao tronco
+    if (kit.numero !== undefined) {
+      const tronco = ossos[HUMANO.nomesOssos.indexOf('tronco')];
+      const n = new THREE.Mesh(geo.numero, matNumero(kit.numero, kit.corNumero, kit.nomeCostas));
+      n.scale.setScalar(0.85 / s);
+      n.position.set(0, 1.9, -1.55);
+      n.rotation.y = Math.PI;
+      tronco.add(n);
+    }
+    // O MakeHuman tem os braços abertos em "A"; as animações do jogo contam com os braços caídos.
+    // Esta correção roda cada braço da posição do MakeHuman para baixo.
+    const correcao = {};
+    for (const lado of ['L', 'R']) {
+      const a = V.ossos[HUMANO.nomesOssos.indexOf('braco.' + lado)].pos;
+      const b = V.ossos[HUMANO.nomesOssos.indexOf('antebraco.' + lado)].pos;
+      const dir = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize();
+      correcao[lado] = new THREE.Quaternion().setFromUnitVectors(dir, new THREE.Vector3(0, -1, 0));
+    }
+    m.raiz.add(caixa);
+    m.real = { caixa, ossos, s, ancaRepouso, correcao };
+    return m;
+  }
+
+  // Copia as rotações dos bonecos de controlo para os ossos do corpo realista
+  const PARES = [['coxa.L', 'ancas', 0], ['canela.L', 'joelhos', 0], ['coxa.R', 'ancas', 1], ['canela.R', 'joelhos', 1],
+    ['braco.L', 'ombros', 0], ['antebraco.L', 'cotovelos', 0], ['braco.R', 'ombros', 1], ['antebraco.R', 'cotovelos', 1]];
+  function sincronizarReal(m) {
+    const r = m.real;
+    if (!r) return;
+    const osso = (n) => r.ossos[HUMANO.nomesOssos.indexOf(n)];
+    const conv = (q) => qTmp.copy(RODAR_CORPO_INV).multiply(q).multiply(RODAR_CORPO);
+    // Anca: roda com o corpo, e o corpo do jogo roda à volta dos pés (não da anca)
+    osso('quadril').quaternion.copy(conv(m.corpo.quaternion));
+    vTmp.copy(r.ancaRepouso).multiplyScalar(r.s).applyQuaternion(RODAR_CORPO);
+    vTmp.y += r.caixa.position.y;
+    vTmp.applyQuaternion(m.corpo.quaternion).add(m.corpo.position);
+    vTmp.y -= r.caixa.position.y;
+    vTmp.applyQuaternion(RODAR_CORPO_INV).divideScalar(r.s);
+    osso('quadril').position.copy(vTmp);
+    osso('cabeca').quaternion.copy(conv(m.cabeca.quaternion));
+    for (const [n, parte, i] of PARES) {
+      const q = osso(n).quaternion.copy(conv(m[parte][i].quaternion));
+      const lado = n.slice(-1);
+      if (n.startsWith('braco')) q.multiply(r.correcao[lado]);
+      else if (n.startsWith('antebraco')) q.premultiply(qTmp2.copy(r.correcao[lado]).invert()).multiply(r.correcao[lado]);
+    }
+  }
+
+  function criarBoneco(kit) {
+    return HUMANO ? criarBonecoReal(kit) : criarBonecoSimples(kit);
   }
 
   function criarModeloJogador(p) {
@@ -1156,6 +1348,7 @@ const Render = (() => {
       animarBoneco(m, d, dt, pose, Math.atan2(b.y - d.y, b.x - d.x));
       if (celebra && festejo.t >= 0.9) celebrar(m, festejo.tipo, festejo.t);
       rodarFinta(m, d);
+      sincronizarReal(m);
     }
     for (const d of v.arbitros) {
       const a = d.ref || d;
@@ -1170,6 +1363,7 @@ const Render = (() => {
       } else if (m.cartao) m.cartao.visible = false;
       if (a.tipo === 'fiscal' && d.bandeira > 0) pose = 'braco';
       animarBoneco(m, d, dt, pose, Math.atan2(v.bola.y - d.y, v.bola.x - d.x));
+      sincronizarReal(m);
     }
     for (const [k, m] of modelos) {
       if (!vivos.has(k)) { scene.remove(m.raiz); modelos.delete(k); }
@@ -1551,12 +1745,14 @@ const Render = (() => {
       });
       pai.add(m.raiz);
       animarBoneco(m, { x: xCentro - 21 + i * 14 + W / 2, y: H + 22 + 1.5, facing: -Math.PI / 2, vx: 0, vy: 0 }, 0, 'sentado');
+      sincronizarReal(m);
     });
     // Treinador de pé à frente do banco, a olhar para o jogo
     const t = criarBoneco({ camisola: '#1d1f24', calcoes: '#1d1f24', meias: '#1d1f24', pele: '#e3b083', cabelo: '#555555',
       estilo: 'curto', barba: team === 1 });
     pai.add(t.raiz);
     animarBoneco(t, { x: xCentro + W / 2 + 36, y: H + 12, facing: -Math.PI / 2, vx: 0, vy: 0 }, 0, null);
+    sincronizarReal(t);
   }
 
   // Qualidade mais baixa para computadores lentos

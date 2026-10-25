@@ -55,3 +55,10 @@ Nas bolas paradas quem marca não anda: usa as teclas de andar para apontar
 - `lib/three.min.js` — biblioteca three.js (r160, licença MIT em `lib/three-LICENSE`)
 
 Ver [ESPECIFICACAO.md](ESPECIFICACAO.md) para tudo o que o jogo vai ter.
+
+## Créditos
+
+- Corpos dos jogadores: dados do [MakeHuman](http://www.makehuman.org) (corpo base, formas, peles, cabelos,
+  olhos e sobrancelhas), convertidos com `ferramentas/makehuman_corpo.py` e `ferramentas/makehuman_jogo.js`
+  a partir do pacote npm `makehuman-data-v1`.
+- 3D: [three.js](https://threejs.org) r160.
