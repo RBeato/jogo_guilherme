@@ -78,7 +78,9 @@ const Render = (() => {
   luz2.position.set(300, 500, -400);
   scene.add(luz2);
 
+  let noite = true;
   function aplicarCeu(tema) {
+    noite = !tema.dia;
     if (tema.dia) {
       scene.background = ceuDia;
       scene.fog = new THREE.Fog('#bcd6f2', 1800, 4500);
@@ -291,6 +293,7 @@ const Render = (() => {
   // ---------- Estádio: bancadas, adeptos, bandeiras e torres ----------
   // Construído por uma função para se poder trocar de estádio.
   const PELES = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'];
+  const ROUPA_ADEPTOS = ['#16181d', '#23262e', '#2f3440', '#454a56', '#5f6470', '#2a3550', '#3b4a63', '#6b5a48', '#cfcfcf'];
   let bracosAdeptos = [];
   let estadioAtual = null;
   let estadioIdx = 0;
@@ -404,8 +407,10 @@ const Render = (() => {
           m.makeTranslation(x, y, z);
           corpos.setMatrixAt(n, m);
           cabecas.setMatrixAt(n, m);
-          const camisola = cores[Math.floor(Math.random() * cores.length)];
-          cor.set(camisola);
+          // Como num estádio a sério: menos de metade com a camisola da equipa, o resto roupa escura
+          const camisola = Math.random() < 0.45 ? cores[Math.floor(Math.random() * cores.length)]
+            : ROUPA_ADEPTOS[Math.floor(Math.random() * ROUPA_ADEPTOS.length)];
+          cor.set(camisola).multiplyScalar((0.55 + Math.random() * 0.45) * (tema.dia ? 1 : 0.85));
           corpos.setColorAt(n, cor);
           cor.set(PELES[Math.floor(Math.random() * PELES.length)]);
           cabecas.setColorAt(n, cor);
@@ -610,6 +615,37 @@ const Render = (() => {
     cotoveloPele: new THREE.SphereGeometry(0.58, 8, 6),
     antebracoPele: perfil([[0, -4.0], [0.42, -3.9], [0.46, -3.4], [0.62, -1.8], [0.64, -0.8], [0.55, -0.1], [0, 0.2]]),
   });
+  // Tecido das camisolas: malha fina (relevo pequeno), um pouco mais baço do que a pele
+  const texMalha = canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) {
+      const v = 110 + ((x + y) % 4 ? 40 : -20) + Math.random() * 30;
+      g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(x, y, 2, 2);
+    }
+  });
+  texMalha.colorSpace = THREE.NoColorSpace;
+  texMalha.wrapS = texMalha.wrapT = THREE.RepeatWrapping;
+  texMalha.repeat.set(6, 6);
+  const matTec = {}, matPel = {};
+  const tecido = (cor) => matTec[cor] || (matTec[cor] = new THREE.MeshStandardMaterial({
+    color: cor, roughness: 0.82, bumpMap: texMalha, bumpScale: 0.25 }));
+  // Cabelo: riscas finas (fios) que dão relevo e brilho
+  const texFios = canvasTex(64, 64, (g, w, h) => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 260; i++) {
+      const v = 60 + Math.random() * 150;
+      g.strokeStyle = `rgb(${v},${v},${v})`; g.lineWidth = 1;
+      const x = Math.random() * w;
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x + (Math.random() - 0.5) * 6, h); g.stroke();
+    }
+  });
+  texFios.colorSpace = THREE.NoColorSpace;
+  texFios.wrapS = texFios.wrapT = THREE.RepeatWrapping;
+  texFios.repeat.set(5, 2);
+  const matCab = {};
+  const cabeloMat = (cor) => matCab[cor] || (matCab[cor] = new THREE.MeshStandardMaterial({
+    color: cor, roughness: 0.6, bumpMap: texFios, bumpScale: 0.5 }));
+  const pele = (cor) => matPel[cor] || (matPel[cor] = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.55 }));
   const mat = {};
   const matDe = (cor) => mat[cor] || (mat[cor] = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.72 }));
   const texNum = {};
@@ -647,12 +683,12 @@ const Render = (() => {
       return m;
     };
     // Proporções de atleta: cabeça pequena (≈ 1/7 da altura), pernas compridas, ombros largos
-    const calcao = mesh(geo.bacia, kit.calcoes);
+    const calcao = mesh(geo.bacia, tecido(kit.calcoes));
     calcao.scale.set(0.66, 1, 1.32);
-    const peito = mesh(geo.tronco, kit.camisola);
+    const peito = mesh(geo.tronco, tecido(kit.camisola));
     peito.scale.set(0.62, 1, 1.32);               // peito largo, cintura fina, de lado é mais estreito
     const barriga = new THREE.Group();
-    const pescoco = mesh(geo.pescoco, kit.pele, 0, 21.6, 0);
+    const pescoco = mesh(geo.pescoco, pele(kit.pele), 0, 21.6, 0);
     pescoco.scale.set(0.9, 1.1, 0.9);
     corpo.add(calcao, barriga, peito, pescoco);
     const gola = mesh(geo.gola, kit.gola || kit.calcoes, 0, 21.0, 0);
@@ -673,10 +709,10 @@ const Render = (() => {
     const cabeca = new THREE.Group();
     cabeca.position.set(0.1, 23.3, 0);
     cabeca.scale.set(0.84 * 0.95, 0.84 * 1.1, 0.84 * 0.9);   // cabeça oval, mais alta do que larga
-    const queixo = mesh(geo.queixo, kit.pele, 0.45, -0.75, 0);
+    const queixo = mesh(geo.queixo, pele(kit.pele), 0.45, -0.75, 0);
     queixo.scale.set(1, 0.9, 1.05);
-    cabeca.add(mesh(geo.cabeca, kit.pele), queixo,
-      mesh(geo.nariz, kit.pele, 1.85, -0.15, 0),
+    cabeca.add(mesh(geo.cabeca, pele(kit.pele)), queixo,
+      mesh(geo.nariz, pele(kit.pele), 1.85, -0.15, 0),
       mesh(geo.boca, '#8a4f48', 1.68, -0.85, 0));
     for (const s of [-1, 1]) {
       const olho = mesh(geo.olho, '#ece6dc', 1.52, 0.35, s * 0.62);
@@ -684,20 +720,20 @@ const Render = (() => {
       cabeca.add(olho,
         mesh(geo.pupila, '#1a120b', 1.66, 0.35, s * 0.62),
         mesh(geo.sobrancelha, kit.cabelo, 1.66, 0.85, s * 0.66),
-        mesh(geo.orelha, kit.pele, 0, 0.05, s * 1.82));
+        mesh(geo.orelha, pele(kit.pele), 0, 0.05, s * 1.82));
     }
     // Cabelo: a linha do cabelo fica acima da testa e desce atrás da cabeça
     const estilo = kit.estilo || 'curto';
-    const cabelo = mesh(geo[estilo === 'topete' ? 'cabelo' : estilo], kit.cabelo);
+    const cabelo = mesh(geo[estilo === 'topete' ? 'cabelo' : estilo], cabeloMat(kit.cabelo));
     cabelo.rotation.z = 0.36;
     if (estilo === 'curto' || estilo === 'topete') cabelo.scale.set(1, 1.12, 1);   // cabelo com volume em cima
     cabeca.add(cabelo);
     if (estilo === 'topete') {
-      const t = mesh(geo.topete, kit.cabelo, 1.0, 1.65, 0);
+      const t = mesh(geo.topete, cabeloMat(kit.cabelo), 1.0, 1.65, 0);
       t.scale.set(1.1, 0.7, 1.4);
       cabeca.add(t);
     }
-    if (kit.barba) cabeca.add(mesh(geo.barba, kit.cabelo));
+    if (kit.barba) cabeca.add(mesh(geo.barba, cabeloMat(kit.cabelo)));
     corpo.add(cabeca);
 
     const ancas = [], joelhos = [], ombros = [], cotovelos = [];
@@ -705,11 +741,11 @@ const Render = (() => {
       const anca = new THREE.Group();
       anca.position.set(0, 13.2, s * 1.5);
       // Coxa com o calção por cima (o calção acompanha a perna, não é uma saia)
-      anca.add(mesh(geo.coxaPele, kit.pele), mesh(geo.pernaCalcao, kit.calcoes));
+      anca.add(mesh(geo.coxaPele, pele(kit.pele)), mesh(geo.pernaCalcao, tecido(kit.calcoes)));
       const joelho = new THREE.Group();
       joelho.position.y = -6.3;
       // Meia até ao joelho, com a caneleira por baixo (barriga da perna)
-      joelho.add(mesh(geo.joelhoPele, kit.pele), mesh(geo.pernaMeia, kit.meias));
+      joelho.add(mesh(geo.joelhoPele, pele(kit.pele)), mesh(geo.pernaMeia, tecido(kit.meias)));
       const faixa = mesh(geo.faixa, kit.gola || kit.calcoes, 0, -0.9, 0);
       joelho.add(faixa);
       const bota = mesh(geo.bota, kit.botas || '#111111', 0.75, -6.25, 0);
@@ -722,13 +758,13 @@ const Render = (() => {
 
       const ombro = new THREE.Group();
       ombro.position.set(0, 20.5, s * 3.1);
-      ombro.add(mesh(geo.bracoPele, kit.pele), mesh(geo.mangaCurta, kit.camisola));
+      ombro.add(mesh(geo.bracoPele, pele(kit.pele)), mesh(geo.mangaCurta, tecido(kit.camisola)));
       const cotovelo = new THREE.Group();
       cotovelo.position.y = -4.4;
-      cotovelo.add(mesh(geo.cotoveloPele, kit.pele), mesh(geo.antebracoPele, kit.pele));
+      cotovelo.add(mesh(geo.cotoveloPele, pele(kit.pele)), mesh(geo.antebracoPele, pele(kit.pele)));
       if (kit.luvas) cotovelo.add(mesh(geo.luva, kit.luvas, 0, -4.4, 0));
       else {
-        const mao = mesh(geo.mao, kit.pele, 0, -4.35, 0);
+        const mao = mesh(geo.mao, pele(kit.pele), 0, -4.35, 0);
         mao.scale.set(0.75, 1.15, 0.55);
         cotovelo.add(mao);
       }
@@ -1057,7 +1093,45 @@ const Render = (() => {
 
   const modelos = new Map();
 
+  // ---------- Sombras em estrela (à noite, uma por cada torre de luz, como nos estádios a sério) ----------
+  const TORRES = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) => [sx * (W / 2 + 200), sz * (H / 2 + 230)]);
+  const texSombraEstrela = canvasTex(128, 32, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    for (let x = 0; x < w; x++) {
+      const a = 0.9 * Math.pow(1 - x / w, 1.6);
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, `rgba(0,0,0,${a})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr; g.fillRect(x, 0, 1, h);
+    }
+  });
+  const MAX_SOMBRAS = 30 * 4;
+  const sombrasEstrela = new THREE.InstancedMesh(
+    new THREE.PlaneGeometry(1, 1).translate(0.5, 0, 0).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: texSombraEstrela, transparent: true, opacity: 0.3, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), MAX_SOMBRAS);
+  sombrasEstrela.frustumCulled = false;
+  scene.add(sombrasEstrela);
+  const mSombra = new THREE.Matrix4(), rSombra = new THREE.Matrix4(), sSombra = new THREE.Matrix4();
+  function atualizarSombrasEstrela(v) {
+    sombrasEstrela.visible = noite;
+    if (!noite) return;
+    let n = 0;
+    for (const d of v.jogadores) {
+      const px = X(d.x), pz = Z(d.y);
+      for (const [tx, tz] of TORRES) {
+        if (n >= MAX_SOMBRAS) break;
+        const a = Math.atan2(pz - tz, px - tx);
+        mSombra.makeTranslation(px, 0.2, pz);
+        mSombra.multiply(rSombra.makeRotationY(-a)).multiply(sSombra.makeScale(28, 1, 6.5));
+        sombrasEstrela.setMatrixAt(n++, mSombra);
+      }
+    }
+    sombrasEstrela.count = n;
+    sombrasEstrela.instanceMatrix.needsUpdate = true;
+  }
+
   function atualizarBonecos(v, dt) {
+    atualizarSombrasEstrela(v);
     const vivos = new Set();
     for (const d of v.jogadores) {
       const p = d.ref || d;
