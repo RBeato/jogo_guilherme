@@ -83,8 +83,10 @@ const Hud = (() => {
     ctx.restore();
 
     // Desenho de dentro (um pouco mais pequeno, para caber no losango)
-    const k = r / 20 * 0.66;
+    const k = r / 20 * 0.8;
     ctx.save();
+    losango(r * (plus ? 0.84 : 0.88));
+    ctx.clip();               // o desenho nunca sai do losango
     ctx.translate(cx, cy);
     ctx.scale(k, k);
     const corDesenho = plus ? '#f7d774' : '#f4f6fa';
@@ -95,171 +97,204 @@ const Hud = (() => {
     ctx.lineJoin = 'round';
     if (plus) { ctx.shadowColor = 'rgba(255,200,60,0.6)'; ctx.shadowBlur = 4; }
     ctx.beginPath();
+    // Peças para os desenhos: bola de futebol, baliza com rede, setas, jogadores, luvas e botas
+    const escuro = plus ? '#14110a' : '#0e131c';
+    const L = (w) => { ctx.lineWidth = w; };
+    const bola = (x, y, r) => {
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      // pentágono no meio e gomos à volta, como uma bola a sério
+      ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0;
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+        ctx.lineTo(x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.4);
+      }
+      ctx.closePath(); ctx.fill();
+      // costuras: do pentágono até à borda
+      ctx.strokeStyle = escuro; ctx.lineWidth = Math.max(0.6, r * 0.13);
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + i * Math.PI * 2 / 5;
+        ctx.moveTo(x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.4);
+        ctx.lineTo(x + Math.cos(a) * r * 0.92, y + Math.sin(a) * r * 0.92);
+      }
+      ctx.stroke();
+      ctx.restore();
+    };
+    const baliza = (x0, y0, x1, y1) => {
+      ctx.save();
+      L(0.7); ctx.globalAlpha = 0.55; ctx.beginPath();
+      for (let x = x0 + 2.2; x < x1; x += 2.2) { ctx.moveTo(x, y0); ctx.lineTo(x, y1); }
+      for (let y = y0 + 2.2; y < y1; y += 2.2) { ctx.moveTo(x0, y); ctx.lineTo(x1, y); }
+      ctx.stroke(); ctx.restore();
+      L(1.8); ctx.beginPath(); ctx.moveTo(x0, y1); ctx.lineTo(x0, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1, y1); ctx.stroke();
+    };
+    const seta = (pts, tracejado = false, ponta = true) => {
+      ctx.save(); L(1.6);
+      if (tracejado) ctx.setLineDash([2.2, 2]);
+      ctx.beginPath(); ctx.moveTo(pts[0], pts[1]);
+      if (pts.length === 4) ctx.lineTo(pts[2], pts[3]);
+      else ctx.quadraticCurveTo(pts[2], pts[3], pts[4], pts[5]);
+      ctx.stroke(); ctx.setLineDash([]);
+      if (ponta) {
+        const n = pts.length, ex = pts[n - 2], ey = pts[n - 1], px = pts[n - 4], py = pts[n - 3];
+        const a = Math.atan2(ey - py, ex - px);
+        ctx.beginPath(); ctx.moveTo(ex, ey);
+        ctx.lineTo(ex - Math.cos(a - 0.5) * 4, ey - Math.sin(a - 0.5) * 4);
+        ctx.lineTo(ex - Math.cos(a + 0.5) * 4, ey - Math.sin(a + 0.5) * 4);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    };
+    const velocidade = (x, y, n = 3, comp = 7) => {
+      ctx.save(); L(1.4); ctx.beginPath();
+      for (let i = 0; i < n; i++) { const dy = (i - (n - 1) / 2) * 3; ctx.moveTo(x, y + dy); ctx.lineTo(x - comp + Math.abs(dy) * 0.6, y + dy); }
+      ctx.stroke(); ctx.restore();
+    };
+    // Jogador: cabeça + corpo em linhas (ângulos em radianos: tronco, braços, pernas)
+    const jogador = (x, y, e, tr = 0, bE = 0.5, bD = -0.5, pE = 0.35, pD = -0.35) => {
+      ctx.save(); ctx.translate(x, y); ctx.scale(e, e); L(2.2 / e * Math.min(1, e));
+      const ox = Math.sin(tr) * 6, oy = -Math.cos(tr) * 6;
+      ctx.beginPath(); ctx.arc(ox * 1.45, oy * 1.45, 2.1, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(ox, oy);
+      for (const a of [bE, bD]) { ctx.moveTo(ox * 0.85, oy * 0.85); ctx.lineTo(ox * 0.85 + Math.sin(a + tr + Math.PI) * 5, oy * 0.85 - Math.cos(a + tr + Math.PI) * 5); }
+      for (const a of [pE, pD]) { ctx.moveTo(0, 0); ctx.lineTo(Math.sin(a + tr + Math.PI) * 6.5, -Math.cos(a + tr + Math.PI) * 6.5); }
+      ctx.stroke(); ctx.restore();
+    };
+    const luva = (x, y, e = 1, rot = 0) => {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(e, e);
+      ctx.beginPath();
+      ctx.moveTo(-4, 6); ctx.lineTo(-4.5, -1);
+      for (let i = 0; i < 4; i++) { const fx = -4 + i * 2.6; ctx.lineTo(fx, -6.5 + Math.abs(i - 1.5) * 0.8); ctx.lineTo(fx + 2, -6.5 + Math.abs(i - 1.5) * 0.8); }
+      ctx.lineTo(4.6, 0); ctx.lineTo(6.5, -2.5); ctx.lineTo(7, 0); ctx.lineTo(4.5, 4); ctx.lineTo(4, 6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    };
+    const bota = (x, y, e = 1, rot = 0) => {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(e, e);
+      ctx.beginPath(); ctx.moveTo(-5, -6); ctx.lineTo(-1, -6); ctx.lineTo(0, -1); ctx.lineTo(6, 0);
+      ctx.quadraticCurveTo(8, 1.5, 7, 3); ctx.lineTo(-5, 3); ctx.closePath(); ctx.fill();
+      ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0;
+      for (const sx of [-3.5, 0, 3.5]) ctx.fillRect(sx, 3, 1.2, 1.4);
+      ctx.restore(); ctx.restore();
+    };
+    const cabecaPerfil = (x, y, e = 1) => {
+      ctx.save(); ctx.translate(x, y); ctx.scale(e, e);
+      ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-2, 4); ctx.lineTo(-2.5, 9); ctx.lineTo(2.5, 9); ctx.lineTo(2, 4); ctx.fill();
+      ctx.restore();
+    };
     switch (nome) {
-      case 'Rápido':   // raio
-        ctx.moveTo(3, -13); ctx.lineTo(-7, 2); ctx.lineTo(0, 2); ctx.lineTo(-3, 13);
-        ctx.lineTo(8, -3); ctx.lineTo(1, -3); ctx.closePath(); ctx.fill();
-        break;
-      case 'Remate Potente':   // bola com rasto de fogo
-        ctx.arc(5, 0, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(-3, -5); ctx.lineTo(-13, -8); ctx.moveTo(-3, 0); ctx.lineTo(-15, 0);
-        ctx.moveTo(-3, 5); ctx.lineTo(-13, 8); ctx.stroke();
-        break;
-      case 'Remate Colocado':   // alvo com seta em curva
-        ctx.arc(5, 3, 8, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(5, 3, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-13, 10); ctx.quadraticCurveTo(-12, -12, 3, -10); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(4, -10); ctx.lineTo(-1, -14); ctx.lineTo(-1, -6); ctx.closePath(); ctx.fill();
-        break;
-      case 'Passe Incisivo':   // seta comprida a atravessar
-        ctx.moveTo(-13, 6); ctx.lineTo(8, -5); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(13, -8); ctx.lineTo(3, -9); ctx.lineTo(8, 0); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(-10, -6, 2.5, 0, Math.PI * 2); ctx.arc(-2, 10, 2.5, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Muralha':   // escudo
+      // ----- Remate -----
+      case 'Remate Colocado':   // Finesse Shot: bola em arco para o canto da baliza
+        baliza(1, -12, 13, -2); bola(-8, 8, 4.2); seta([-6, 3, -8, -12, 5, -9]); break;
+      case 'Remate Potente':    // Power Shot: bola com rasto de velocidade a entrar na baliza
+        baliza(5, -8, 14, 8); bola(0, 1, 5); velocidade(-6, 1, 3, 8); break;
+      case 'Remate Rasteiro':   // Low Driven Shot: bola rente à relva até ao fundo da baliza
+        baliza(3, -7, 14, 9); L(1.6); ctx.beginPath(); ctx.moveTo(-14, 9.5); ctx.lineTo(14, 9.5); ctx.stroke();
+        bola(-9, 5.5, 3.6); seta([-5, 6, 10, 6]); break;
+      case 'Chapéu':            // Chip Shot: bola por cima do guarda-redes
+        baliza(4, -2, 14, 9); jogador(8, 8, 0.75, 0, 2.6, -2.6); bola(-10, 7, 3.2); seta([-8, 3, 0, -16, 9, -3], true); break;
+      case 'Bola Parada':       // Dead Ball: bola por cima da barreira
+        baliza(4, -12, 14, -3); for (const bx of [-3, 0, 3]) jogador(bx, 4, 0.5, 0, 0.2, -0.2, 0.1, -0.1);
+        bola(-10, 10, 3.2); seta([-8, 6, -4, -14, 7, -6], true); break;
+      case 'Trivela':           // Trivela: bota a bater com a parte de fora, bola em curva
+        bota(-5, 6, 0.9, 0.3); bola(5, 4, 3.6); seta([7, 0, 14, -8, 4, -12]); break;
+      case 'Acrobático':        // Acrobatic: pontapé de bicicleta
+        jogador(-1, 2, 1, Math.PI * 0.85, 1.4, -1.4, 0.9, -0.2); bola(9, -9, 3.6); break;
+      case 'Cabeceamento Potente':   // Power Header
+        cabecaPerfil(-6, -1); bola(7, -4, 4.2); velocidade(1, -4, 3, 0.1); seta([11, -4, 15, -4]); break;
+      case 'Cabeceamento Preciso':   // Precision Header: cabeça + bola para o canto
+        cabecaPerfil(-8, 3, 0.9); baliza(3, -12, 14, -3); bola(-3, -5, 3.2); seta([0, -6, 6, -11, 11, -10]); break;
+      case 'Gamechanger':       // Gamechanger: bola a brilhar
+        bola(0, 2, 6); for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4; L(1.5); ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * 9, 2 + Math.sin(a) * 9); ctx.lineTo(Math.cos(a) * 13, 2 + Math.sin(a) * 13); ctx.stroke();
+        } break;
+      // ----- Passe -----
+      case 'Passe Incisivo':    // Incisive Pass: passe a passar entre dois defesas
+        jogador(-1, -5, 0.55); jogador(-1, 9, 0.55); bola(-11, 2, 3); seta([-7, 2, 13, 2]); break;
+      case 'Passe Tenso':       // Pinged Pass: passe forte e direito
+        bola(-7, 0, 4); velocidade(-12, 0, 3, 4); seta([-2, -3, 13, -3]); seta([-2, 3, 13, 3]); break;
+      case 'Passe Longo':       // Long Ball Pass: passe longo pelo ar
+        bola(-11, 9, 3); seta([-9, 5, 0, -18, 12, 8], true); jogador(12, 10, 0.5); break;
+      case 'Tiki-Taka':         // Tiki Taka: passes curtos entre três jogadores
+        jogador(-10, 9, 0.5); jogador(10, 9, 0.5); jogador(0, -6, 0.5);
+        seta([-7, 4, -2, -3]); seta([3, -3, 8, 4]); bola(0, 9, 2.6); break;
+      case 'Cruzamento Tenso':  // Whipped Pass: cruzamento da ala para a área
+        baliza(-4, -13, 6, -6); bola(-12, 10, 3); seta([-9, 7, 14, 2, 1, -4]); break;
+      case 'Inventivo':         // Inventive: passe de calcanhar / lâmpada
+        ctx.arc(-3, -5, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(-5.5, 1, 5, 3); bola(8, 7, 3.6); break;
+      // ----- Defesa -----
+      case 'Intercetor':        // Intercept: passe cortado
+        bola(-11, 0, 3); seta([-7, 0, 3, 0], true, false);
+        L(2.4); ctx.beginPath(); ctx.moveTo(6, -10); ctx.lineTo(6, 10); ctx.stroke(); jogador(11, 8, 0.5); break;
+      case 'Bloqueio':          // Block: perna esticada a bloquear o remate
+        jogador(4, 9, 0.85, -0.2, 0.6, -0.8, 1.3, -0.3); bola(-10, 3, 3.6); velocidade(-14, 3, 2, 3); break;
+      case 'Antecipação':       // Anticipate: olho atento à bola
+        ctx.moveTo(-12, -2); ctx.quadraticCurveTo(-2, -12, 8, -2); ctx.quadraticCurveTo(-2, 8, -12, -2); ctx.fill();
+        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(-2, -2, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        bola(10, 8, 3.4); break;
+      case 'Carrinho':          // Slide Tackle: jogador a deslizar para a bola
+        L(1.4); ctx.moveTo(-14, 11); ctx.lineTo(14, 11); ctx.stroke();
+        jogador(-2, 9, 0.9, -1.25, 0.4, -1.2, 0.5, 0.1); bola(10, 7.5, 3.2); break;
+      case 'Marcação':          // Jockey: defesa de lado, a acompanhar
+        jogador(-4, 8, 0.9, 0.15, 1.2, -1.2, 0.6, -0.6); bola(9, 8, 3.2);
+        seta([-12, -10, -4, -10]); seta([4, -10, 12, -10]); break;
+      case 'Fortaleza Aérea':   // Aerial Fortress: salta mais alto pela bola
+        jogador(0, 10, 0.9, 0, 2.7, -2.7, 0.25, -0.25); bola(0, -11, 3.4); break;
+      case 'Muralha':           // Bruiser: escudo com uma bola
         ctx.moveTo(0, -13); ctx.lineTo(11, -8); ctx.lineTo(9, 5); ctx.lineTo(0, 13);
         ctx.lineTo(-9, 5); ctx.lineTo(-11, -8); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = '#14110a'; ctx.shadowBlur = 0; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke();
-        break;
-      case 'Carrinho':   // bota a deslizar
-        ctx.moveTo(-12, 11); ctx.lineTo(13, 11); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(-8, 7); ctx.lineTo(4, -6); ctx.lineTo(9, -2); ctx.lineTo(4, 7); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-13, -2); ctx.lineTo(-6, -2); ctx.moveTo(-13, 3); ctx.lineTo(-9, 3); ctx.stroke();
-        break;
-      case 'Intercetor':   // seta parada por uma barreira
-        ctx.moveTo(-13, 0); ctx.lineTo(2, 0); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-2, -6); ctx.lineTo(-2, 6); ctx.closePath(); ctx.fill();
-        ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(9, -12); ctx.lineTo(9, 12); ctx.stroke();
-        break;
-      case 'Reflexos':   // luva
-        ctx.roundRect(-8, -2, 16, 14, 4); ctx.fill();
-        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.roundRect(-8 + i * 4.2, -13, 3.4, 12, 1.7); ctx.fill(); }
-        break;
-      case 'Remate Rasteiro':   // bola com seta rasteira
-        ctx.arc(-6, 6, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-12, 12); ctx.lineTo(12, 12); ctx.moveTo(2, 4); ctx.lineTo(12, 4); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(14, 4); ctx.lineTo(8, 0); ctx.lineTo(8, 8); ctx.closePath(); ctx.fill();
-        break;
-      case 'Chapéu':   // bola em arco por cima de uma barra
-        ctx.moveTo(-12, 8); ctx.quadraticCurveTo(0, -18, 12, 8); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, -5, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-2, 2, 4, 10);
-        break;
-      case 'Bola Parada':   // bola parada e arco tracejado
-        ctx.arc(-7, 8, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(-2, 4); ctx.quadraticCurveTo(8, -16, 13, -2); ctx.stroke(); ctx.setLineDash([]);
-        break;
-      case 'Trivela':   // seta em curva para fora
-        ctx.moveTo(-12, 10); ctx.bezierCurveTo(-10, -10, 10, -10, 8, 6); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(8, 12); ctx.lineTo(3, 3); ctx.lineTo(13, 4); ctx.closePath(); ctx.fill();
-        break;
-      case 'Acrobático':   // pontapé de bicicleta (círculo com seta)
-        ctx.arc(0, 0, 9, 0.6, Math.PI * 1.8); ctx.stroke();
-        ctx.beginPath(); ctx.arc(9, -5, 3.5, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Cabeceamento Potente': case 'Cabeceamento Preciso':   // cabeça e bola
-        ctx.arc(-4, 2, 7, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(9, -8, 4, 0, Math.PI * 2); ctx.fill();
-        if (nome === 'Cabeceamento Potente') { ctx.beginPath(); ctx.moveTo(6, 2); ctx.lineTo(13, 2); ctx.moveTo(5, 7); ctx.lineTo(12, 9); ctx.stroke(); }
-        else { ctx.beginPath(); ctx.arc(9, -8, 8, 0, Math.PI * 2); ctx.lineWidth = 1.5; ctx.stroke(); }
-        break;
-      case 'Gamechanger':   // estrela
-        for (let i = 0; i < 10; i++) {
-          const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 5 : 12;
-          ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-        }
-        ctx.closePath(); ctx.fill();
-        break;
-      case 'Passe Tenso':   // duas setas rápidas
-        for (const y of [-5, 5]) {
-          ctx.beginPath(); ctx.moveTo(-12, y); ctx.lineTo(6, y); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(12, y); ctx.lineTo(5, y - 5); ctx.lineTo(5, y + 5); ctx.closePath(); ctx.fill();
-        }
-        break;
-      case 'Passe Longo':   // arco comprido
-        ctx.moveTo(-13, 10); ctx.quadraticCurveTo(0, -20, 13, 10); ctx.stroke();
-        ctx.beginPath(); ctx.arc(13, 10, 3.5, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Tiki-Taka':   // triângulo de passes
-        ctx.moveTo(0, -10); ctx.lineTo(10, 8); ctx.lineTo(-10, 8); ctx.closePath(); ctx.stroke();
-        for (const [x, y] of [[0, -10], [10, 8], [-10, 8]]) { ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill(); }
-        break;
-      case 'Cruzamento Tenso':   // curva a descer para a área
-        ctx.moveTo(-13, -8); ctx.quadraticCurveTo(6, -14, 10, 8); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(10, 13); ctx.lineTo(5, 4); ctx.lineTo(14, 4); ctx.closePath(); ctx.fill();
-        break;
-      case 'Inventivo':   // lâmpada
-        ctx.arc(0, -3, 8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillRect(-4, 6, 8, 6);
-        break;
-      case 'Bloqueio':   // mão aberta
-        ctx.roundRect(-7, -4, 14, 14, 3); ctx.fill();
-        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.roundRect(-7 + i * 3.8, -12, 3, 9, 1.5); ctx.fill(); }
-        break;
-      case 'Antecipação':   // olho
-        ctx.moveTo(-13, 0); ctx.quadraticCurveTo(0, -12, 13, 0); ctx.quadraticCurveTo(0, 12, -13, 0); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, 4.5, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Marcação':   // duas linhas paralelas (acompanhar)
-        ctx.moveTo(-10, -8); ctx.lineTo(10, -8); ctx.moveTo(-10, 8); ctx.lineTo(10, 8); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Fortaleza Aérea':   // torre
-        ctx.fillRect(-6, -6, 12, 18);
-        for (const x of [-8, -2, 4]) ctx.fillRect(x, -12, 4, 6);
-        break;
-      case 'Técnico':   // bola com remoinho
-        ctx.arc(0, 0, 10, 0, Math.PI * 1.5); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Arranque Rápido':   // duas setas em V
-        for (const x of [-7, 3]) { ctx.beginPath(); ctx.moveTo(x, -10); ctx.lineTo(x + 8, 0); ctx.lineTo(x, 10); ctx.stroke(); }
-        break;
-      case 'Primeiro Toque':   // pé e bola
-        ctx.moveTo(-12, 4); ctx.lineTo(0, 4); ctx.lineTo(4, 10); ctx.lineTo(-12, 10); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.arc(7, -5, 5, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Habilidoso': case 'Flair':   // raios de magia
-        ctx.moveTo(0, -12); ctx.lineTo(3, -3); ctx.lineTo(12, 0); ctx.lineTo(3, 3); ctx.lineTo(0, 12);
-        ctx.lineTo(-3, 3); ctx.lineTo(-12, 0); ctx.lineTo(-3, -3); ctx.closePath(); ctx.fill();
-        if (nome === 'Flair') { ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.lineWidth = 1.5; ctx.stroke(); }
-        break;
-      case 'Resistente à Pressão': case 'Intimidador':   // escudo com bola
-        ctx.moveTo(0, -12); ctx.lineTo(10, -7); ctx.lineTo(8, 5); ctx.lineTo(0, 12); ctx.lineTo(-8, 5); ctx.lineTo(-10, -7); ctx.closePath(); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Incansável':   // infinito
-        ctx.moveTo(0, 0); ctx.bezierCurveTo(5, -8, 13, -8, 13, 0); ctx.bezierCurveTo(13, 8, 5, 8, 0, 0);
-        ctx.bezierCurveTo(-5, -8, -13, -8, -13, 0); ctx.bezierCurveTo(-13, 8, -5, 8, 0, 0); ctx.stroke();
-        break;
-      case 'Lançamento Longo': case 'Lançamento Longo GR':   // mãos por cima da cabeça e arco
-        ctx.moveTo(-12, 10); ctx.quadraticCurveTo(-2, -16, 12, 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(-10, 10, 3.5, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Alcance':   // luva com setas para os lados
-        ctx.roundRect(-5, -5, 10, 11, 3); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fill();
-        ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(8, -4); ctx.lineTo(8, 4); ctx.closePath(); ctx.fill();
-        break;
-      case 'Corta Cruzamentos':   // luva por cima, bola a cair
-        ctx.roundRect(-6, -2, 12, 12, 3); ctx.fill();
-        ctx.beginPath(); ctx.arc(0, -10, 4, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 'Sai aos Pés':   // seta a sair
-        ctx.moveTo(-12, 0); ctx.lineTo(6, 0); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(13, 0); ctx.lineTo(5, -6); ctx.lineTo(5, 6); ctx.closePath(); ctx.fill();
-        ctx.fillRect(-14, -10, 3, 20);
-        break;
-      case 'Jogo de Pés':   // pé
-        ctx.moveTo(-10, -4); ctx.lineTo(4, -4); ctx.lineTo(10, 6); ctx.lineTo(-10, 6); ctx.closePath(); ctx.fill();
-        break;
-      case 'Defletor':   // bola desviada
-        ctx.moveTo(-12, 10); ctx.lineTo(0, 0); ctx.lineTo(12, 8); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, -6, 4, 0, Math.PI * 2); ctx.fill();
-        break;
+        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(0, -1, 5, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        bola(0, -1, 3.8); break;
+      // ----- Bola no pé / físico -----
+      case 'Técnico':           // Technical: bola com setas a rodar à volta (drible apertado)
+        bola(0, 0, 5); seta([-9, 4, -11, -9, 1, -10]); seta([9, -4, 11, 9, -1, 10]); break;
+      case 'Rápido':            // Rapid: raio com bola
+        ctx.moveTo(1, -14); ctx.lineTo(-8, 1); ctx.lineTo(-1, 1); ctx.lineTo(-4, 13); ctx.lineTo(6, -3); ctx.lineTo(0, -3); ctx.closePath(); ctx.fill();
+        bola(9, 9, 3.4); break;
+      case 'Arranque Rápido':   // Quick Step: jogador a arrancar
+        jogador(2, 8, 1, 0.45, 1.1, -0.9, 0.9, -0.7); velocidade(-6, -1, 3, 7); break;
+      case 'Primeiro Toque':    // First Touch: bota a amortecer a bola
+        bota(-3, 8, 0.9); bola(4, -3, 4); seta([4, -14, 4, -9]); break;
+      case 'Habilidoso':        // Trickster: pé por cima da bola (bicicleta)
+        bola(0, 6, 4.5); seta([-11, 4, 0, -14, 11, 4], true); break;
+      case 'Flair':             // Flair: bola com estrelinhas
+        bola(-3, 4, 5.5);
+        for (const [sx, sy, sr] of [[8, -7, 4.5], [-9, -9, 2.8], [11, 7, 2.4]]) {
+          ctx.beginPath();
+          for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? sr * 0.35 : sr; ctx.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr); }
+          ctx.closePath(); ctx.fill();
+        } break;
+      case 'Resistente à Pressão':   // Press Proven: bola protegida com setas a apertar
+        bola(0, 0, 4.8); L(1.6); ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke();
+        seta([-14, -9, -9, -5]); seta([14, -9, 9, -5]); seta([0, 14, 0, 9.5]); break;
+      case 'Intimidador':       // Enforcer: ombro contra ombro
+        jogador(-4, 9, 0.9, 0.35); jogador(5, 9, 0.9, -0.35); bola(0, 11, 2.4); break;
+      case 'Incansável':        // Relentless: infinito
+        L(2.6); ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-4, -7, -13, -7, -13, 0); ctx.bezierCurveTo(-13, 7, -4, 7, 0, 0);
+        ctx.bezierCurveTo(4, -7, 13, -7, 13, 0); ctx.bezierCurveTo(13, 7, 4, 7, 0, 0); ctx.stroke(); break;
+      case 'Lançamento Longo':  // Long Throw: lançamento lateral com a bola por cima da cabeça
+        jogador(-3, 10, 0.9, -0.15, 2.9, -2.9, 0.3, -0.3); bola(-4, -12, 3); seta([1, -12, 12, -14, 13, -2], true); break;
+      // ----- Guarda-redes -----
+      case 'Reflexos':          // Quick Reflexes: luva rápida à frente da bola
+        luva(-3, 2, 1.05); bola(9, -6, 3.6); velocidade(15, -6, 2, -4); break;
+      case 'Alcance':           // Far Reach: mergulho até ao canto
+        baliza(-14, -12, 14, 10); jogador(-2, 6, 0.85, 1.15, 0.2, 0.1, 0.2, 0.0); luva(9, -5, 0.55, 1.2); bola(12, -8, 2.6); break;
+      case 'Corta Cruzamentos': // Cross Claimer: duas luvas a agarrar a bola no ar
+        bola(0, -7, 4.5); luva(-7, 5, 0.75, -0.4); luva(7, 5, 0.75, 0.4); break;
+      case 'Sai aos Pés':       // Rush Out: GR sai da baliza para a bola
+        baliza(-14, -10, -6, 8); jogador(0, 8, 0.85, 0.5, 1.4, -0.8, 0.9, -0.6); bola(11, 8, 3); velocidade(-4, -2, 2, 5); break;
+      case 'Lançamento Longo GR':   // Far Throw: luva a lançar longe
+        luva(-8, 6, 0.8, -0.5); bola(-2, -4, 3); seta([1, -6, 7, -14, 14, -5], true); break;
+      case 'Jogo de Pés':       // Footwork: bota do GR a jogar a bola
+        bota(-4, 6, 1); bola(8, 4, 4); luva(-7, -8, 0.5); break;
+      case 'Defletor':          // Deflector: luva desvia a bola para fora da baliza
+        baliza(-14, -12, -2, 10); luva(0, 0, 0.8, 0.3); bola(10, -7, 3.4); seta([4, -3, 13, -12]); break;
       default:
-        ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+        bola(0, 0, 7);
     }
     ctx.restore();
   }
