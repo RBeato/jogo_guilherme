@@ -37,19 +37,14 @@ const Hud = (() => {
   function iconePS(nome, cx, cy, r, plus = true) {
     // Estilo FC: losango de cantos arredondados, escuro por dentro, desenho em linhas finas.
     // PlayStyle+: contorno e desenho dourados com brilho; PlayStyle normal: contorno cinzento, desenho branco.
+    // Forma de diamante de joia: em cima plano e largo, em baixo acaba em bico
     const losango = (raio) => {
-      const c = raio * 0.18;   // arredondar os cantos
-      const pts = [[0, -raio], [raio * 0.86, 0], [0, raio], [-raio * 0.86, 0]];
       ctx.beginPath();
-      for (let i = 0; i < 4; i++) {
-        const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % 4];
-        const [xp, yp] = pts[(i + 3) % 4];
-        const l0 = Math.hypot(x0 - xp, y0 - yp), l1 = Math.hypot(x1 - x0, y1 - y0);
-        const ax = x0 + (xp - x0) / l0 * c, ay = y0 + (yp - y0) / l0 * c;
-        const bx = x0 + (x1 - x0) / l1 * c, by = y0 + (y1 - y0) / l1 * c;
-        if (i === 0) ctx.moveTo(cx + ax, cy + ay); else ctx.lineTo(cx + ax, cy + ay);
-        ctx.quadraticCurveTo(cx + x0, cy + y0, cx + bx, cy + by);
-      }
+      ctx.moveTo(cx - raio * 0.5, cy - raio * 0.78);
+      ctx.lineTo(cx + raio * 0.5, cy - raio * 0.78);
+      ctx.lineTo(cx + raio * 1.0, cy - raio * 0.3);
+      ctx.lineTo(cx, cy + raio * 1.0);
+      ctx.lineTo(cx - raio * 1.0, cy - raio * 0.3);
       ctx.closePath();
     };
     const aro = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
@@ -82,12 +77,27 @@ const Hud = (() => {
     ctx.fillRect(cx - r, cy - r, r * 2, r);
     ctx.restore();
 
-    // Desenho de dentro (um pouco mais pequeno, para caber no losango)
-    const k = r / 20 * 0.8;
+    // Faces do diamante (riscas finas a brilhar)
     ctx.save();
     losango(r * (plus ? 0.84 : 0.88));
-    ctx.clip();               // o desenho nunca sai do losango
-    ctx.translate(cx, cy);
+    ctx.clip();
+    ctx.strokeStyle = plus ? 'rgba(255,215,110,0.28)' : 'rgba(220,228,240,0.2)';
+    ctx.lineWidth = 1 * s;
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cy - r * 0.3); ctx.lineTo(cx + r, cy - r * 0.3);
+    for (const [x0, x1] of [[-0.5, -0.25], [0.5, 0.25], [-0.5, -0.75], [0.5, 0.75]]) {
+      ctx.moveTo(cx + r * x0, cy - r * 0.78); ctx.lineTo(cx + r * x1, cy - r * 0.3);
+    }
+    for (const x0 of [-0.75, -0.25, 0.25, 0.75]) { ctx.moveTo(cx + r * x0, cy - r * 0.3); ctx.lineTo(cx, cy + r); }
+    ctx.stroke();
+    ctx.restore();
+
+    // Desenho de dentro (um pouco mais pequeno, para caber no diamante)
+    const k = r / 20 * 0.72;
+    ctx.save();
+    losango(r * (plus ? 0.84 : 0.88));
+    ctx.clip();               // o desenho nunca sai do diamante
+    ctx.translate(cx, cy - r * 0.1);
     ctx.scale(k, k);
     const corDesenho = plus ? '#f7d774' : '#f4f6fa';
     ctx.fillStyle = corDesenho;
