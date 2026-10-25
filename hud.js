@@ -49,13 +49,14 @@ const Hud = (() => {
     };
     const aro = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
     if (plus) {
-      aro.addColorStop(0, '#fff3b0'); aro.addColorStop(0.4, '#e9b730'); aro.addColorStop(0.7, '#a8740a'); aro.addColorStop(1, '#f6d66a');
+      aro.addColorStop(0, '#8a5d05'); aro.addColorStop(0.5, '#5e3f02'); aro.addColorStop(1, '#a8740a');
     } else {
-      aro.addColorStop(0, '#f2f5fa'); aro.addColorStop(0.5, '#9aa3b2'); aro.addColorStop(1, '#d9dee7');
+      aro.addColorStop(0, '#6b7486'); aro.addColorStop(0.5, '#454d5c'); aro.addColorStop(1, '#7c8597');
     }
-    const fundo = ctx.createRadialGradient(cx, cy - r * 0.4, r * 0.1, cx, cy, r * 1.1);
-    fundo.addColorStop(0, plus ? '#2a2414' : '#232a38');
-    fundo.addColorStop(1, plus ? '#0d0b06' : '#0b0f17');
+    // Por dentro: metal (dourado nos PlayStyle+, prateado nos normais), mais claro em cima
+    const fundo = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+    if (plus) { fundo.addColorStop(0, '#fff2b8'); fundo.addColorStop(0.45, '#f0c445'); fundo.addColorStop(1, '#b07e12'); }
+    else { fundo.addColorStop(0, '#ffffff'); fundo.addColorStop(0.45, '#d5dbe4'); fundo.addColorStop(1, '#8e98a8'); }
     ctx.save();
     ctx.shadowColor = plus ? 'rgba(255,196,40,0.75)' : 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = (plus ? 10 : 4) * s;
@@ -71,7 +72,7 @@ const Hud = (() => {
     losango(r * (plus ? 0.84 : 0.88));
     ctx.clip();
     const brilho = ctx.createLinearGradient(cx, cy - r, cx, cy);
-    brilho.addColorStop(0, plus ? 'rgba(255,230,150,0.22)' : 'rgba(255,255,255,0.12)');
+    brilho.addColorStop(0, 'rgba(255,255,255,0.35)');
     brilho.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = brilho;
     ctx.fillRect(cx - r, cy - r, r * 2, r);
@@ -81,7 +82,7 @@ const Hud = (() => {
     ctx.save();
     losango(r * (plus ? 0.84 : 0.88));
     ctx.clip();
-    ctx.strokeStyle = plus ? 'rgba(255,215,110,0.28)' : 'rgba(220,228,240,0.2)';
+    ctx.strokeStyle = plus ? 'rgba(120,80,0,0.25)' : 'rgba(60,70,90,0.2)';
     ctx.lineWidth = 1 * s;
     ctx.beginPath();
     ctx.moveTo(cx - r, cy - r * 0.3); ctx.lineTo(cx + r, cy - r * 0.3);
@@ -99,16 +100,16 @@ const Hud = (() => {
     ctx.clip();               // o desenho nunca sai do diamante
     ctx.translate(cx, cy - r * 0.1);
     ctx.scale(k, k);
-    const corDesenho = plus ? '#f7d774' : '#f4f6fa';
+    const corDesenho = plus ? '#2b1c00' : '#1b2230';
     ctx.fillStyle = corDesenho;
     ctx.strokeStyle = corDesenho;
     ctx.lineWidth = 2.4;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    if (plus) { ctx.shadowColor = 'rgba(255,200,60,0.6)'; ctx.shadowBlur = 4; }
+    // (sem brilho à volta do desenho: num fundo claro fica mais nítido)
     ctx.beginPath();
     // Peças para os desenhos: bola de futebol, baliza com rede, setas, jogadores, luvas e botas
-    const escuro = plus ? '#14110a' : '#0e131c';
+    const escuro = plus ? '#f3cf5c' : '#e3e8ef';   // cor dos gomos/pormenores (o fundo do diamante)
     const L = (w) => { ctx.lineWidth = w; };
     const bola = (x, y, r) => {
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
