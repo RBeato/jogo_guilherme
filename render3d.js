@@ -103,7 +103,7 @@ const Render = (() => {
     g.translate(M, M);
     const faixa = 50;
     for (let x = -M; x < W + M; x += faixa) {
-      g.fillStyle = Math.floor((x + M) / faixa) % 2 ? '#3f9442' : '#36863a';
+      g.fillStyle = Math.floor((x + M) / faixa) % 2 ? '#357a37' : '#2d6c31';
       g.fillRect(x, -M, faixa, H + 2 * M);
     }
     // Pequenas manchas para a relva não parecer plástico
@@ -149,9 +149,24 @@ const Render = (() => {
       g.beginPath(); g.arc(cx, cy, 10, a0, a0 + Math.PI / 2); g.stroke();
     }
   });
+  // Textura fina das folhas da relva (repete-se muitas vezes): dá relevo e brilho como relva a sério
+  const texFolhas = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 9000; i++) {
+      const v = 70 + Math.random() * 120;
+      g.strokeStyle = `rgb(${v},${v},${v})`;
+      g.lineWidth = 0.8 + Math.random() * 0.8;
+      const x = Math.random() * w, y = Math.random() * h, a = Math.random() * Math.PI;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * 3, y + Math.sin(a) * 3); g.stroke();
+    }
+  });
+  texFolhas.colorSpace = THREE.NoColorSpace;
+  texFolhas.wrapS = texFolhas.wrapT = THREE.RepeatWrapping;
+  texFolhas.repeat.set(70, 46);
   const relva = new THREE.Mesh(
     new THREE.PlaneGeometry(W + 2 * M, H + 2 * M),
-    new THREE.MeshStandardMaterial({ map: texRelva, roughness: 0.95 }));
+    new THREE.MeshStandardMaterial({ map: texRelva, roughness: 0.88, bumpMap: texFolhas, bumpScale: 0.6,
+      roughnessMap: texFolhas }));
   relva.rotation.x = -Math.PI / 2;
   relva.receiveShadow = true;
   scene.add(relva);
@@ -577,6 +592,24 @@ const Render = (() => {
     bandeira: new THREE.PlaneGeometry(3.6, 2.8),
     cartao: new THREE.BoxGeometry(0.3, 3.0, 2.0),
   };
+  // Partes do corpo com forma de músculo: um perfil (raio, altura) que roda à volta do eixo,
+  // mais grosso na coxa e na barriga da perna, fino no joelho e no tornozelo
+  const perfil = (pts, seg = 14) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+  Object.assign(geo, {
+    tronco: perfil([[0, 14.5], [1.95, 14.6], [2.0, 15.8], [2.15, 17.0], [2.4, 18.4], [2.42, 19.5], [2.15, 20.4],
+      [1.6, 21.0], [0.9, 21.3], [0, 21.4]], 18),
+    bacia: perfil([[0, 11.9], [2.05, 12.0], [2.25, 13.2], [2.2, 14.4], [2.0, 15.2], [0, 15.4]], 18),
+    coxaPele: perfil([[0, -6.6], [0.85, -6.55], [0.95, -6.2], [1.05, -5.4], [1.3, -4.0], [1.45, -2.8],
+      [1.5, -1.6], [1.45, -0.4], [0, 0.2]]),
+    pernaCalcao: perfil([[0, -3.5], [1.62, -3.45], [1.7, -3.2], [1.7, -1.5], [1.62, 0.2], [0, 0.8]]),
+    joelhoPele: new THREE.SphereGeometry(0.95, 10, 8),
+    pernaMeia: perfil([[0, -6.25], [0.55, -6.2], [0.6, -5.6], [0.72, -4.6], [1.0, -3.2], [1.13, -2.2],
+      [1.06, -1.0], [0.97, -0.1], [0, 0.25]]),
+    mangaCurta: perfil([[0, -2.4], [0.86, -2.35], [0.9, -2.0], [0.92, -0.8], [0.85, 0.15], [0, 0.55]]),
+    bracoPele: perfil([[0, -4.6], [0.55, -4.5], [0.62, -3.9], [0.78, -2.6], [0.82, -1.4], [0.75, -0.3], [0, 0.1]]),
+    cotoveloPele: new THREE.SphereGeometry(0.58, 8, 6),
+    antebracoPele: perfil([[0, -4.0], [0.42, -3.9], [0.46, -3.4], [0.62, -1.8], [0.64, -0.8], [0.55, -0.1], [0, 0.2]]),
+  });
   const mat = {};
   const matDe = (cor) => mat[cor] || (mat[cor] = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.72 }));
   const texNum = {};
@@ -613,22 +646,24 @@ const Render = (() => {
       m.userData.partilhado = true;
       return m;
     };
-    const calcao = mesh(geo.calcao, kit.calcoes, 0, 12.4, 0);
-    calcao.scale.set(0.74, 1, 1.05);
-    const barriga = mesh(geo.barriga, kit.camisola, 0, 15.2, 0);
-    barriga.scale.set(0.66, 1, 1.0);
-    const peito = mesh(geo.peito, kit.camisola, 0, 17.9, 0);
-    peito.scale.set(0.64, 0.9, 1.2);              // peito mais largo do que a cintura
-    corpo.add(calcao, barriga, peito, mesh(geo.pescoco, kit.pele, 0, 21.4, 0));
-    const gola = mesh(geo.gola, kit.gola || kit.calcoes, 0, 20.75, 0);
+    // Proporções de atleta: cabeça pequena (≈ 1/7 da altura), pernas compridas, ombros largos
+    const calcao = mesh(geo.bacia, kit.calcoes);
+    calcao.scale.set(0.66, 1, 1.32);
+    const peito = mesh(geo.tronco, kit.camisola);
+    peito.scale.set(0.62, 1, 1.32);               // peito largo, cintura fina, de lado é mais estreito
+    const barriga = new THREE.Group();
+    const pescoco = mesh(geo.pescoco, kit.pele, 0, 21.6, 0);
+    pescoco.scale.set(0.9, 1.1, 0.9);
+    corpo.add(calcao, barriga, peito, pescoco);
+    const gola = mesh(geo.gola, kit.gola || kit.calcoes, 0, 21.0, 0);
     gola.rotation.x = Math.PI / 2;
     gola.scale.set(1, 1.15, 1);
     corpo.add(gola);
     if (kit.numero !== undefined) {
       // Costas: nome e número; frente: número pequeno
-      const n = mesh(geo.numero, matNumero(kit.numero, kit.corNumero, kit.nomeCostas), -1.86, 17.5, 0);
+      const n = mesh(geo.numero, matNumero(kit.numero, kit.corNumero, kit.nomeCostas), -1.5, 18.0, 0);
       n.rotation.y = -Math.PI / 2;
-      const f = mesh(geo.numero, matNumero(kit.numero, kit.corNumero), 1.86, 18.6, -0.9);
+      const f = mesh(geo.numero, matNumero(kit.numero, kit.corNumero), 1.55, 19.0, -0.9);
       f.scale.set(0.35, 0.35, 1);
       f.rotation.y = Math.PI / 2;
       corpo.add(n, f);
@@ -636,17 +671,18 @@ const Render = (() => {
 
     // Cabeça (num grupo próprio, para poder olhar para a bola)
     const cabeca = new THREE.Group();
-    cabeca.position.set(0.1, 23.2, 0);
+    cabeca.position.set(0.1, 23.3, 0);
+    cabeca.scale.setScalar(0.84);
     const queixo = mesh(geo.queixo, kit.pele, 0.45, -0.75, 0);
     queixo.scale.set(1, 0.9, 1.05);
     cabeca.add(mesh(geo.cabeca, kit.pele), queixo,
       mesh(geo.nariz, kit.pele, 1.85, -0.15, 0),
-      mesh(geo.boca, '#7a2e2e', 1.68, -0.85, 0));
+      mesh(geo.boca, '#8a4f48', 1.68, -0.85, 0));
     for (const s of [-1, 1]) {
-      const olho = mesh(geo.olho, '#ffffff', 1.5, 0.35, s * 0.66);
-      olho.scale.set(0.55, 1, 1);
+      const olho = mesh(geo.olho, '#ece6dc', 1.52, 0.35, s * 0.62);
+      olho.scale.set(0.45, 0.62, 0.9);
       cabeca.add(olho,
-        mesh(geo.pupila, '#1a120b', 1.72, 0.35, s * 0.66),
+        mesh(geo.pupila, '#1a120b', 1.66, 0.35, s * 0.62),
         mesh(geo.sobrancelha, kit.cabelo, 1.66, 0.85, s * 0.66),
         mesh(geo.orelha, kit.pele, 0, 0.05, s * 1.82));
     }
@@ -667,27 +703,35 @@ const Render = (() => {
     const ancas = [], joelhos = [], ombros = [], cotovelos = [];
     for (const s of [-1, 1]) {
       const anca = new THREE.Group();
-      anca.position.set(0, 12.6, s * 1.6);
-      anca.add(mesh(geo.coxa, kit.pele, 0, -3.0, 0));
+      anca.position.set(0, 13.2, s * 1.5);
+      // Coxa com o calção por cima (o calção acompanha a perna, não é uma saia)
+      anca.add(mesh(geo.coxaPele, kit.pele), mesh(geo.pernaCalcao, kit.calcoes));
       const joelho = new THREE.Group();
-      joelho.position.y = -6.0;
-      joelho.add(mesh(geo.canela, kit.meias, 0, -3.0, 0));
+      joelho.position.y = -6.3;
+      // Meia até ao joelho, com a caneleira por baixo (barriga da perna)
+      joelho.add(mesh(geo.joelhoPele, kit.pele), mesh(geo.pernaMeia, kit.meias));
       const faixa = mesh(geo.faixa, kit.gola || kit.calcoes, 0, -0.9, 0);
       joelho.add(faixa);
-      const bota = mesh(geo.bota, kit.botas || '#111111', 0.7, -5.95, 0);
+      const bota = mesh(geo.bota, kit.botas || '#111111', 0.75, -6.25, 0);
       bota.rotation.z = Math.PI / 2;
+      bota.scale.set(0.75, 1.05, 0.85);
       joelho.add(bota);
       anca.add(joelho);
       corpo.add(anca);
       ancas.push(anca); joelhos.push(joelho);
 
       const ombro = new THREE.Group();
-      ombro.position.set(0, 20.4, s * 3.5);
-      ombro.add(mesh(geo.manga, kit.camisola, 0, -1.0, 0), mesh(geo.braco, kit.pele, 0, -2.4, 0));
+      ombro.position.set(0, 20.5, s * 3.1);
+      ombro.add(mesh(geo.bracoPele, kit.pele), mesh(geo.mangaCurta, kit.camisola));
       const cotovelo = new THREE.Group();
       cotovelo.position.y = -4.4;
-      cotovelo.add(mesh(geo.antebraco, kit.pele, 0, -2.0, 0));
-      cotovelo.add(kit.luvas ? mesh(geo.luva, kit.luvas, 0, -4.4, 0) : mesh(geo.mao, kit.pele, 0, -4.2, 0));
+      cotovelo.add(mesh(geo.cotoveloPele, kit.pele), mesh(geo.antebracoPele, kit.pele));
+      if (kit.luvas) cotovelo.add(mesh(geo.luva, kit.luvas, 0, -4.4, 0));
+      else {
+        const mao = mesh(geo.mao, kit.pele, 0, -4.35, 0);
+        mao.scale.set(0.75, 1.15, 0.55);
+        cotovelo.add(mao);
+      }
       ombro.add(cotovelo);
       corpo.add(ombro);
       ombros.push(ombro); cotovelos.push(cotovelo);
@@ -749,7 +793,7 @@ const Render = (() => {
       const lado = i === 0 ? -1 : 1;
       m.ancas[i].rotation.set(0, 0, Math.sin(fase) * amp * 0.9 + 0.05);
       m.joelhos[i].rotation.z = -0.1 - amp * (0.15 + 1.2 * Math.max(0, Math.cos(fase)));
-      m.ombros[i].rotation.set(lado * 0.1, 0, -Math.sin(fase) * amp * 0.8 + resp);
+      m.ombros[i].rotation.set(-lado * 0.12, 0, -Math.sin(fase) * amp * 0.8 + resp);
       m.cotovelos[i].rotation.z = 0.25 + amp * 0.9;
     }
     m.corpo.rotation.z = -amp * 0.16;                        // inclina-se para a frente a correr
@@ -846,7 +890,7 @@ const Render = (() => {
       for (let i = 0; i < 2; i++) { m.ancas[i].rotation.set(0, 0, 0); m.joelhos[i].rotation.z = 0; }
     };
     pernasDireitas();
-    const L = [-1, 1];                       // lado de cada braço/perna
+    const L = [1, -1];                       // para fora: o braço/perna 0 está do lado -z
     if (tipo === 'siu') {
       if (c < 0.35) {
         // Prepara o salto: agacha-se

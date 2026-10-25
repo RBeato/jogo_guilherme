@@ -683,6 +683,20 @@ const Hud = (() => {
     ctx.restore();
   }
 
+  // Cantos do ecrã um pouco mais escuros, como numa câmara de televisão
+  let vinhetaCache = null;
+  function vinheta() {
+    const w = canvas.width, h = canvas.height;
+    if (!vinhetaCache || vinhetaCache.w !== w || vinhetaCache.h !== h) {
+      const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.45, w / 2, h / 2, Math.hypot(w, h) * 0.6);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.38)');
+      vinhetaCache = { w, h, g };
+    }
+    ctx.fillStyle = vinhetaCache.g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
   function desenhar() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (state === 'titulo' || !ball) { titulo(); avisoComando(); return; }
@@ -698,6 +712,7 @@ const Hud = (() => {
       texto('ESPAÇO para saltar', canvas.width / 2, canvas.height - 30 * s, 14, '#c8d0e0', 'center', '600');
       return;
     }
+    vinheta();
     etiquetas();
     popupsPS();
     placar();
