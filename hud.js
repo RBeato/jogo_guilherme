@@ -250,23 +250,65 @@ const Hud = (() => {
         L(2.4); ctx.beginPath(); ctx.moveTo(6, -10); ctx.lineTo(6, 10); ctx.stroke(); seta([6, 0, 9, -9]); break;
       case 'Bloqueio':          // Block: perna esticada a bloquear o remate
         bloco(3, -10, 7, 10); bola(-6, 0, 3.8); velocidade(-10, 0, 2, 4); seta([-2, -5, -10, -11]); break;
-      case 'Antecipação': {     // Anticipate: o guaxinim (ladrão esperto) a roubar a bola
-        // cabeça com orelhas e focinho
-        ctx.moveTo(-11, -9); ctx.lineTo(-8, -14); ctx.lineTo(-4, -10);
-        ctx.quadraticCurveTo(0, -12, 4, -10); ctx.lineTo(8, -14); ctx.lineTo(11, -9);
-        ctx.quadraticCurveTo(13, -2, 6, 3); ctx.lineTo(0, 7); ctx.lineTo(-6, 3);
-        ctx.quadraticCurveTo(-13, -2, -11, -9); ctx.closePath(); ctx.fill();
-        // máscara (clara) com os olhos escuros, e o nariz
-        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0;
-        ctx.beginPath(); ctx.moveTo(-11, -5); ctx.quadraticCurveTo(-6, -9, 0, -5); ctx.quadraticCurveTo(6, -9, 11, -5);
-        ctx.quadraticCurveTo(6, 0, 0, -2); ctx.quadraticCurveTo(-6, 0, -11, -5); ctx.fill();
-        ctx.beginPath(); ctx.arc(-6, -9.5, 1.2, 0, Math.PI * 2); ctx.arc(6, -9.5, 1.2, 0, Math.PI * 2); ctx.fill();
+      case 'Antecipação': {     // Anticipate: guaxinim (ladrão esperto) a roubar a bola — só preto e a cor do diamante
+        ctx.save(); ctx.shadowBlur = 0;
+        const PRETO = '#121110', CLARO = escuro;   // CLARO = dourado (PlayStyle+) ou prateado
+        const g = (c) => { ctx.fillStyle = c; };
+        // orelhas: pretas com o meio claro
+        for (const sx of [-1, 1]) {
+          g(PRETO); ctx.beginPath(); ctx.ellipse(sx * 8.5, -10.5, 4.3, 4.7, sx * 0.35, 0, Math.PI * 2); ctx.fill();
+          g(CLARO); ctx.beginPath(); ctx.ellipse(sx * 8.4, -10.2, 2.3, 2.7, sx * 0.35, 0, Math.PI * 2); ctx.fill();
+        }
+        // cabeça com tufos de pelo nas bochechas
+        g(PRETO);
+        ctx.beginPath();
+        ctx.moveTo(0, -11);
+        ctx.bezierCurveTo(8, -11, 12, -7, 13, -2);
+        ctx.lineTo(15.5, 1); ctx.lineTo(12.8, 2.2); ctx.lineTo(14.5, 4.8); ctx.lineTo(10.5, 5.2);
+        ctx.bezierCurveTo(7, 9.5, 3, 11.5, 0, 12);
+        ctx.bezierCurveTo(-3, 11.5, -7, 9.5, -10.5, 5.2);
+        ctx.lineTo(-14.5, 4.8); ctx.lineTo(-12.8, 2.2); ctx.lineTo(-15.5, 1); ctx.lineTo(-13, -2);
+        ctx.bezierCurveTo(-12, -7, -8, -11, 0, -11);
+        ctx.fill();
+        // cara clara (testa, à volta da máscara e focinho)
+        g(CLARO);
+        ctx.beginPath();
+        ctx.moveTo(0, -8.8);
+        ctx.bezierCurveTo(6, -9, 10.5, -6, 11, -1.5);
+        ctx.bezierCurveTo(11, 3, 8, 5, 5.5, 6.5);
+        ctx.bezierCurveTo(4.5, 9.5, 2, 10.5, 0, 10.6);
+        ctx.bezierCurveTo(-2, 10.5, -4.5, 9.5, -5.5, 6.5);
+        ctx.bezierCurveTo(-8, 5, -11, 3, -11, -1.5);
+        ctx.bezierCurveTo(-10.5, -6, -6, -9, 0, -8.8);
+        ctx.fill();
+        // risca preta no meio da testa
+        g(PRETO); ctx.beginPath(); ctx.moveTo(-1.6, -9); ctx.lineTo(1.6, -9); ctx.lineTo(0.9, -1.5); ctx.lineTo(-0.9, -1.5); ctx.fill();
+        // máscara preta de "ladrão"
+        ctx.beginPath();
+        ctx.moveTo(0, -1.5);
+        ctx.bezierCurveTo(3, -5, 8, -5.5, 11.5, -2.5);
+        ctx.bezierCurveTo(12, 1, 9, 3.5, 6, 2.5);
+        ctx.bezierCurveTo(3.5, 1.8, 1.5, 1, 0, 1.5);
+        ctx.bezierCurveTo(-1.5, 1, -3.5, 1.8, -6, 2.5);
+        ctx.bezierCurveTo(-9, 3.5, -12, 1, -11.5, -2.5);
+        ctx.bezierCurveTo(-8, -5.5, -3, -5, 0, -1.5);
+        ctx.fill();
+        // olhos: anel claro com a pupila preta e um brilho
+        for (const sx of [-1, 1]) {
+          g(CLARO); ctx.beginPath(); ctx.arc(sx * 5.6, -1.3, 1.7, 0, Math.PI * 2); ctx.fill();
+          g(PRETO); ctx.beginPath(); ctx.arc(sx * 5.6, -1.2, 1.15, 0, Math.PI * 2); ctx.fill();
+          g(CLARO); ctx.beginPath(); ctx.arc(sx * 5.6 + 0.45, -1.7, 0.4, 0, Math.PI * 2); ctx.fill();
+        }
+        // nariz, boca e bigodes pretos
+        g(PRETO); ctx.beginPath(); ctx.ellipse(0, 4.6, 2.1, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = PRETO; ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(0, 5.8); ctx.lineTo(0, 7.6); ctx.moveTo(-2.2, 8.4); ctx.quadraticCurveTo(0, 7.2, 2.2, 8.4); ctx.stroke();
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (const sx of [-1, 1]) for (const dy of [-0.6, 0.8]) { ctx.moveTo(sx * 3.5, 6 + dy); ctx.lineTo(sx * 9, 5.2 + dy * 2); }
+        ctx.stroke();
         ctx.restore();
-        ctx.beginPath(); ctx.arc(-5, -4.8, 1.7, 0, Math.PI * 2); ctx.arc(5, -4.8, 1.7, 0, Math.PI * 2); ctx.fill();
-        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0;
-        ctx.beginPath(); ctx.arc(-4.5, -5.3, 0.6, 0, Math.PI * 2); ctx.arc(5.5, -5.3, 0.6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-        ctx.beginPath(); ctx.arc(0, 4.5, 1.6, 0, Math.PI * 2); ctx.fill();
-        bola(9, 10, 3.4);
+        bola(10, 10.5, 3.2);
         break;
       }
       case 'Carrinho':          // Slide Tackle: jogador a deslizar para a bola
