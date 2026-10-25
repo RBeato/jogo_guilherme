@@ -209,20 +209,22 @@ const TODAS_EQUIPAS = [
     { camisola: '#ffd60a', calcoes: '#111111', meias: '#ffd60a', numero: '#111111', gola: '#111111', gr: '#6a00f4' },
     { camisola: '#6a00f4', calcoes: '#6a00f4', meias: '#6a00f4', numero: '#ffd60a', gola: '#ffd60a' },
     { tipo: 'v', cores: ['#ffd60a', '#111111', '#ffd60a'] }, [
-      j('Tomás Rocha', 1, 'GR', 80, 82, 'Reflexos', 'c c curto 0'),
-      j('Rafael Pinto', 4, 'DC', 79, [74, 45, 66, 66, 80, 80], 'Muralha', 'c e curto 0'),
-      j('Diogo Lopes', 3, 'DE', 80, [88, 60, 72, 78, 76, 72], 'Rápido', 'm p curto 0'),
-      j('Romeu', 8, 'MC', 85, [74, 78, 90, 84, 70, 72], 'Passe Incisivo', 'c c curto 1'),
+      // Lendas (cartas ICON) a acompanhar o Guilherme.B; o Romeu também é ICON
+      j('Lev Yashini', 1, 'GR', 91, 92, 'Reflexos', 'c p curto 0', 'Yashini'),
+      j('Franz Beckenbaueri', 5, 'DC', 91, [76, 62, 84, 82, 92, 84], 'Antecipação', 'c c curto 0', 'Beckenbaueri'),
+      j('Paolo Maldinii', 3, 'DE', 91, [85, 50, 76, 78, 93, 84], 'Carrinho', 'c e volume 0', 'Maldinii'),
+      j('Romeu', 8, 'MC', 90, [80, 82, 92, 88, 72, 78], 'Passe Incisivo', 'c c curto 1'),
       j('Guilherme.B', 10, 'PL', 99, [99, 99, 95, 99, 45, 90], 'Remate Potente', 'c c topete 0 #ffd60a', 'Guilherme B'),
     ]),
   equipa('GONÇALO FC', 'GON', 'Equipa inventada',
     { camisola: '#38b6ff', calcoes: '#0b1f4d', meias: '#38b6ff', numero: '#ffffff', gola: '#ffffff', gr: '#ff7b00' },
     { camisola: '#ffffff', calcoes: '#ffffff', meias: '#ffffff', numero: '#38b6ff', gola: '#0b1f4d' },
     { tipo: 'h', cores: ['#38b6ff', '#ffffff', '#38b6ff'] }, [
-      j('Vasco Moreira', 1, 'GR', 81, 83, 'Reflexos', 'c e curto 0'),
-      j('Henrique Alves', 4, 'DC', 80, [72, 48, 68, 66, 82, 84], 'Muralha', 't p curto 0'),
-      j('Tiago Ramos', 3, 'DE', 80, [87, 58, 74, 79, 77, 73], 'Rápido', 'c c curto 0'),
-      j('Simão Ferreira', 8, 'MC', 84, [76, 80, 88, 85, 68, 74], 'Passe Incisivo', 'c l curto 0'),
+      // Lendas (cartas ICON) a acompanhar o Gonçalo.B
+      j('Gianluigi Buffoni', 1, 'GR', 91, 92, 'Reflexos', 'c c curto 0', 'Buffoni'),
+      j('Fabio Cannavaroi', 5, 'DC', 90, [82, 45, 70, 74, 92, 86], 'Bloqueio', 'c p curto 0', 'Cannavaroi'),
+      j('Roberto Carlosi', 3, 'DE', 90, [92, 82, 80, 84, 82, 84], 'Remate Potente', 'm p rapado 0', 'Roberto Carlosi'),
+      j('Kakái', 8, 'MC', 90, [91, 86, 86, 90, 48, 78], 'Arranque Rápido', 'c c curto 0', 'Kakái'),
       j('Gonçalo.B', 10, 'PL', 99, [98, 99, 94, 99, 46, 89], 'Remate Colocado', 'c e volume 0 #38b6ff', 'Gonçalo B'),
     ]),
 ];
@@ -235,6 +237,9 @@ const CARTAS_ESPECIAIS = {
   'Gonçalo.B': { tipo: 'FUTTIES', cores: ['#ff6ad5', '#c2189b', '#6b2bd9', '#24125e'], texto: '#ffffff', borda: '#d9f6ff',
     confetti: ['#00e5ff', '#ffe600', '#ff9f1c', '#ffffff'] },
 }
+
+// Cartas ICON (lendas): branco-pérola com contorno dourado
+const CARTA_ICON = { tipo: 'ICON', cores: ['#fffdf6', '#f4ecd6', '#e6d6a8', '#cdb57c'], texto: '#3a2a05', borda: '#d4af37' };
 
 // ---------- Mais 6 jogadores por equipa, para o 11 contra 11 ----------
 // Ordem: defesa direito, defesa central, médio, médio, extremo direito, extremo esquerdo.
@@ -306,14 +311,19 @@ const EXTRA_11 = {
   'PARIS SG': [x('Nuno Mendesi', 25, 'DD', 86, 'e p volume 0'), x('Willian Pachoi', 51, 'DC', 83, 'm p curto 1'),
     x('João Nevesi', 87, 'MC', 85, 'c c curto 0', 'Intercetor'), x('Fabián Ruizi', 8, 'MC', 85, 'c e curto 1'),
     x('Désiré Douéi', 14, 'ED', 85, 'n p curto 0'), x('Khvicha Kvaratskheliai', 7, 'EE', 87, 'c c curto 0', 'Rápido')],
-  'GUILHERME FC': [x('Afonso Matos', 2, 'DD', 79, 'c c curto 0'), x('Pedro Gomes', 5, 'DC', 79, 'c e curto 0'),
-    x('Martim Sousa', 6, 'MC', 80, 'c l curto 0'), x('Lourenço Costa', 7, 'MC', 80, 'm p curto 0'),
-    x('Santiago Reis', 11, 'ED', 81, 'e p curto 0'), x('Duarte Faria', 9, 'EE', 81, 'c c topete 0')],
-  'GONÇALO FC': [x('Bernardo Lima', 2, 'DD', 79, 'c c curto 0'), x('Miguel Santos', 5, 'DC', 79, 't e curto 0'),
-    x('Rodrigo Pires', 6, 'MC', 80, 'c e curto 0'), x('Francisco Melo', 7, 'MC', 80, 'c l curto 0'),
-    x('Gabriel Nunes', 11, 'ED', 81, 'm p curto 0'), x('Leonardo Cruz', 9, 'EE', 81, 'c c topete 0')],
+  'GUILHERME FC': [x('Cafui', 2, 'DD', 90, 'n p rapado 0'), x('Carles Puyoli', 4, 'DC', 90, 'c c volume 0', 'Muralha'),
+    x('Zinedine Zidanei', 6, 'MC', 91, 'c c rapado 0', 'Técnico'), x('Andrea Pirloi', 21, 'MC', 90, 'c e volume 1', 'Passe Longo'),
+    x('Luís Figoi', 7, 'ED', 91, 'c c curto 0', 'Cruzamento Tenso'), x('Ronaldinhoi', 11, 'EE', 91, 'm p volume 0', 'Habilidoso')],
+  'GONÇALO FC': [x('Philipp Lahmi', 2, 'DD', 90, 'c l curto 0'), x('Rio Ferdinandi', 4, 'DC', 90, 'n p rapado 0', 'Fortaleza Aérea'),
+    x('Xavii', 6, 'MC', 91, 'c e curto 1', 'Tiki-Taka'), x('Andrés Iniestai', 14, 'MC', 91, 'c c rapado 0', 'Resistente à Pressão'),
+    x('Eusébioi', 13, 'ED', 91, 'n p curto 0', 'Remate Potente'), x('Thierry Henryi', 12, 'EE', 91, 'n p rapado 0', 'Remate Colocado')],
 };
 for (const eq of TODAS_EQUIPAS) eq.plantel11 = eq.plantel.concat(EXTRA_11[eq.nome] || []);
+// No Guilherme FC e no Gonçalo FC, todos menos o jogador de 99 são lendas com carta ICON
+for (const nome of ['GUILHERME FC', 'GONÇALO FC']) {
+  const eq = TODAS_EQUIPAS.find(e => e.nome === nome);
+  for (const p of eq.plantel11) if (!CARTAS_ESPECIAIS[p.nome]) CARTAS_ESPECIAIS[p.nome] = CARTA_ICON;
+}
 
 // ---------- PlayStyles ao estilo do FC 26 ----------
 // Cada jogador tem 1 ou 2 PlayStyle+ (dourados, mais fortes) e alguns PlayStyles normais (prateados).
@@ -388,6 +398,22 @@ const PS_ESPECIAIS = {
   'Florian Wirtzi': ['Técnico', 'Passe Incisivo', 'Primeiro Toque'],
   'Thibaut Courtoisi': ['Alcance+', 'Corta Cruzamentos', 'Defletor'],
   'Guilherme.B': ['Chapéu+', 'Habilidoso', 'Arranque Rápido', 'Trivela'],
+  // Lendas
+  'Lev Yashini': ['Reflexos+', 'Alcance', 'Corta Cruzamentos'],
+  'Franz Beckenbaueri': ['Antecipação+', 'Passe Longo', 'Intercetor'],
+  'Paolo Maldinii': ['Carrinho+', 'Marcação', 'Antecipação'],
+  'Romeu': ['Passe Incisivo+', 'Tiki-Taka', 'Passe Longo'],
+  'Zinedine Zidanei': ['Técnico+', 'Primeiro Toque', 'Resistente à Pressão'],
+  'Ronaldinhoi': ['Habilidoso+', 'Flair', 'Trivela'],
+  'Luís Figoi': ['Cruzamento Tenso+', 'Habilidoso', 'Técnico'],
+  'Andrea Pirloi': ['Passe Longo+', 'Bola Parada', 'Inventivo'],
+  'Gianluigi Buffoni': ['Reflexos+', 'Alcance', 'Defletor'],
+  'Roberto Carlosi': ['Remate Potente+', 'Rápido', 'Bola Parada'],
+  'Kakái': ['Arranque Rápido+', 'Técnico', 'Remate Colocado'],
+  'Eusébioi': ['Remate Potente+', 'Arranque Rápido', 'Acrobático'],
+  'Thierry Henryi': ['Remate Colocado+', 'Rápido', 'Primeiro Toque'],
+  'Xavii': ['Tiki-Taka+', 'Passe Incisivo', 'Resistente à Pressão'],
+  'Andrés Iniestai': ['Resistente à Pressão+', 'Técnico', 'Passe Incisivo'],
   'Gonçalo.B': ['Remate Colocado+', 'Arranque Rápido', 'Primeiro Toque', 'Bola Parada'],
 };
 

@@ -100,7 +100,11 @@ Guilherme — como nos jogos de futebol antigos sem licença. Cada jogador tem u
 - Clubes europeus: Real Madrid, Barcelona, Manchester City, Bayern, Liverpool, Paris SG
 - Equipas inventadas: Guilherme FC (com o Guilherme.B e o Romeu) e Gonçalo FC (azul-celeste e branco, com o Gonçalo.B).
   O Guilherme.B e o Gonçalo.B têm 99 e são os únicos com carta especial colorida ao estilo FUTTIES
-  (cor-de-rosa e roxo, com confettis e um brilho a passar)
+  (cor-de-rosa e roxo, com confettis e um brilho a passar).
+  Os colegas deles são **lendas com carta ICON** (branco-pérola e dourado, 90–91):
+  Guilherme FC — Yashini, Beckenbaueri, Maldinii, Romeu (também ICON), Cafui, Puyoli, Zidanei,
+  Pirloi, Figoi, Ronaldinhoi; Gonçalo FC — Buffoni, Cannavaroi, Roberto Carlosi, Kakái, Lahmi,
+  Ferdinandi, Xavii, Iniestai, Eusébioi, Henryi (lendas reais levam o "i", como os outros)
 
 Se as camisolas forem parecidas, a segunda equipa joga com o equipamento alternativo.
 Os plantéis mudam todas as épocas: alguns jogadores podem já ter mudado de clube.

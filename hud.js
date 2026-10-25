@@ -320,7 +320,7 @@ const Hud = (() => {
       // Confettis (sempre nos mesmos sítios, para não tremerem)
       let semente = 7;
       const rnd = () => { semente = (semente * 9301 + 49297) % 233280; return semente / 233280; };
-      for (let i = 0; i < 26; i++) {
+      for (let i = 0; i < (especial.confetti ? 26 : 0); i++) {
         ctx.fillStyle = especial.confetti[i % especial.confetti.length];
         ctx.globalAlpha = 0.85;
         ctx.save();
@@ -356,7 +356,7 @@ const Hud = (() => {
     ctx.fillStyle = EQUIPAS[p.team].camisola;
     ctx.fillRect(x + w - 15 * k, y + 8 * k, 9 * k, 6 * k);
     if (especial && mostrarNome) {
-      ctx.fillStyle = '#ffe600';
+      ctx.fillStyle = especial.tipo === 'ICON' ? '#9c7a1c' : '#ffe600';
       ctx.textAlign = 'center';
       ctx.font = `900 ${6 * k}px "Segoe UI", system-ui, sans-serif`;
       ctx.fillText(especial.tipo, x + w / 2, y + h - 3.5 * k);
