@@ -35,53 +35,65 @@ const Hud = (() => {
   const nomeFC = nome => (PLAYSTYLES_FC[nome] ? PLAYSTYLES_FC[nome].en : nome);
 
   function iconePS(nome, cx, cy, r, plus = true) {
-    // PlayStyle+: dourado com brilho e um "+"; PlayStyle normal: prateado
-    const ouro = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+    // Estilo FC: losango de cantos arredondados, escuro por dentro, desenho em linhas finas.
+    // PlayStyle+: contorno e desenho dourados com brilho; PlayStyle normal: contorno cinzento, desenho branco.
+    const losango = (raio) => {
+      const c = raio * 0.18;   // arredondar os cantos
+      const pts = [[0, -raio], [raio * 0.86, 0], [0, raio], [-raio * 0.86, 0]];
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[(i + 1) % 4];
+        const [xp, yp] = pts[(i + 3) % 4];
+        const l0 = Math.hypot(x0 - xp, y0 - yp), l1 = Math.hypot(x1 - x0, y1 - y0);
+        const ax = x0 + (xp - x0) / l0 * c, ay = y0 + (yp - y0) / l0 * c;
+        const bx = x0 + (x1 - x0) / l1 * c, by = y0 + (y1 - y0) / l1 * c;
+        if (i === 0) ctx.moveTo(cx + ax, cy + ay); else ctx.lineTo(cx + ax, cy + ay);
+        ctx.quadraticCurveTo(cx + x0, cy + y0, cx + bx, cy + by);
+      }
+      ctx.closePath();
+    };
+    const aro = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
     if (plus) {
-      ouro.addColorStop(0, '#fff1a8');
-      ouro.addColorStop(0.45, '#e6b422');
-      ouro.addColorStop(1, '#8a5a00');
+      aro.addColorStop(0, '#fff3b0'); aro.addColorStop(0.4, '#e9b730'); aro.addColorStop(0.7, '#a8740a'); aro.addColorStop(1, '#f6d66a');
     } else {
-      ouro.addColorStop(0, '#ffffff');
-      ouro.addColorStop(0.5, '#c4ccd8');
-      ouro.addColorStop(1, '#6d7686');
+      aro.addColorStop(0, '#f2f5fa'); aro.addColorStop(0.5, '#9aa3b2'); aro.addColorStop(1, '#d9dee7');
     }
+    const fundo = ctx.createRadialGradient(cx, cy - r * 0.4, r * 0.1, cx, cy, r * 1.1);
+    fundo.addColorStop(0, plus ? '#2a2414' : '#232a38');
+    fundo.addColorStop(1, plus ? '#0d0b06' : '#0b0f17');
     ctx.save();
-    ctx.shadowColor = plus ? 'rgba(255,200,40,0.7)' : 'rgba(200,215,235,0.4)';
-    ctx.shadowBlur = (plus ? 12 : 5) * s;
-    ctx.fillStyle = ouro;
-    ctx.beginPath();
-    for (let i = 0; i < 8; i++) {
-      const a = Math.PI / 8 + i * Math.PI / 4;
-      ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-    }
-    ctx.closePath();
+    ctx.shadowColor = plus ? 'rgba(255,196,40,0.75)' : 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = (plus ? 10 : 4) * s;
+    losango(r);
+    ctx.fillStyle = aro;
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = plus ? '#fff6c8' : '#eef2f7';
-    ctx.lineWidth = 1.5 * s;
-    ctx.stroke();
-    if (plus) {
-      // O "+" dos PlayStyle+
-      ctx.save();
-      ctx.fillStyle = '#2b1d00';
-      ctx.beginPath(); ctx.arc(cx + r * 0.72, cy - r * 0.72, r * 0.34, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#ffe680';
-      ctx.fillRect(cx + r * 0.72 - r * 0.2, cy - r * 0.72 - r * 0.06, r * 0.4, r * 0.12);
-      ctx.fillRect(cx + r * 0.72 - r * 0.06, cy - r * 0.72 - r * 0.2, r * 0.12, r * 0.4);
-      ctx.restore();
-    }
+    losango(r * (plus ? 0.84 : 0.88));
+    ctx.fillStyle = fundo;
+    ctx.fill();
+    // Brilho em cima (como metal polido)
+    ctx.save();
+    losango(r * (plus ? 0.84 : 0.88));
+    ctx.clip();
+    const brilho = ctx.createLinearGradient(cx, cy - r, cx, cy);
+    brilho.addColorStop(0, plus ? 'rgba(255,230,150,0.22)' : 'rgba(255,255,255,0.12)');
+    brilho.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = brilho;
+    ctx.fillRect(cx - r, cy - r, r * 2, r);
+    ctx.restore();
 
-    // Desenho de dentro
-    const k = r / 20;
+    // Desenho de dentro (um pouco mais pequeno, para caber no losango)
+    const k = r / 20 * 0.66;
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(k, k);
-    ctx.fillStyle = plus ? '#2b1d00' : '#1c2230';
-    ctx.strokeStyle = plus ? '#2b1d00' : '#1c2230';
-    ctx.lineWidth = 2.6;
+    const corDesenho = plus ? '#f7d774' : '#f4f6fa';
+    ctx.fillStyle = corDesenho;
+    ctx.strokeStyle = corDesenho;
+    ctx.lineWidth = 2.4;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    if (plus) { ctx.shadowColor = 'rgba(255,200,60,0.6)'; ctx.shadowBlur = 4; }
     ctx.beginPath();
     switch (nome) {
       case 'Rápido':   // raio
@@ -108,7 +120,7 @@ const Hud = (() => {
       case 'Muralha':   // escudo
         ctx.moveTo(0, -13); ctx.lineTo(11, -8); ctx.lineTo(9, 5); ctx.lineTo(0, 13);
         ctx.lineTo(-9, 5); ctx.lineTo(-11, -8); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = '#e6b422'; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke();
+        ctx.strokeStyle = '#14110a'; ctx.shadowBlur = 0; ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke();
         break;
       case 'Carrinho':   // bota a deslizar
         ctx.moveTo(-12, 11); ctx.lineTo(13, 11); ctx.stroke();
@@ -745,5 +757,5 @@ const Hud = (() => {
     }
   }
 
-  return { desenhar };
+  return { desenhar, iconePS };
 })();
