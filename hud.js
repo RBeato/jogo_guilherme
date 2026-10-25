@@ -250,10 +250,25 @@ const Hud = (() => {
         L(2.4); ctx.beginPath(); ctx.moveTo(6, -10); ctx.lineTo(6, 10); ctx.stroke(); seta([6, 0, 9, -9]); break;
       case 'Bloqueio':          // Block: perna esticada a bloquear o remate
         bloco(3, -10, 7, 10); bola(-6, 0, 3.8); velocidade(-10, 0, 2, 4); seta([-2, -5, -10, -11]); break;
-      case 'Antecipação':       // Anticipate: olho atento à bola
-        ctx.moveTo(-12, -2); ctx.quadraticCurveTo(-2, -12, 8, -2); ctx.quadraticCurveTo(-2, 8, -12, -2); ctx.fill();
-        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(-2, -2, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-        bola(10, 8, 3.4); break;
+      case 'Antecipação': {     // Anticipate: o guaxinim (ladrão esperto) a roubar a bola
+        // cabeça com orelhas e focinho
+        ctx.moveTo(-11, -9); ctx.lineTo(-8, -14); ctx.lineTo(-4, -10);
+        ctx.quadraticCurveTo(0, -12, 4, -10); ctx.lineTo(8, -14); ctx.lineTo(11, -9);
+        ctx.quadraticCurveTo(13, -2, 6, 3); ctx.lineTo(0, 7); ctx.lineTo(-6, 3);
+        ctx.quadraticCurveTo(-13, -2, -11, -9); ctx.closePath(); ctx.fill();
+        // máscara (clara) com os olhos escuros, e o nariz
+        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.moveTo(-11, -5); ctx.quadraticCurveTo(-6, -9, 0, -5); ctx.quadraticCurveTo(6, -9, 11, -5);
+        ctx.quadraticCurveTo(6, 0, 0, -2); ctx.quadraticCurveTo(-6, 0, -11, -5); ctx.fill();
+        ctx.beginPath(); ctx.arc(-6, -9.5, 1.2, 0, Math.PI * 2); ctx.arc(6, -9.5, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        ctx.beginPath(); ctx.arc(-5, -4.8, 1.7, 0, Math.PI * 2); ctx.arc(5, -4.8, 1.7, 0, Math.PI * 2); ctx.fill();
+        ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0;
+        ctx.beginPath(); ctx.arc(-4.5, -5.3, 0.6, 0, Math.PI * 2); ctx.arc(5.5, -5.3, 0.6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        ctx.beginPath(); ctx.arc(0, 4.5, 1.6, 0, Math.PI * 2); ctx.fill();
+        bola(9, 10, 3.4);
+        break;
+      }
       case 'Carrinho':          // Slide Tackle: jogador a deslizar para a bola
         L(1.4); ctx.moveTo(-14, 11); ctx.lineTo(14, 11); ctx.stroke();
         bota(-2, 6, 1, 0); velocidade(-8, 6, 3, 6); bola(10, 7, 3.2); break;
