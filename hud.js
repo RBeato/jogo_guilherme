@@ -194,6 +194,14 @@ const Hud = (() => {
       ctx.beginPath(); ctx.moveTo(-2, 4); ctx.lineTo(-2.5, 9); ctx.lineTo(2.5, 9); ctx.lineTo(2, 4); ctx.fill();
       ctx.restore();
     };
+    const cone = (x, y, e = 1) => {
+      ctx.beginPath(); ctx.moveTo(x, y - 5 * e); ctx.lineTo(x + 3.2 * e, y + 3 * e); ctx.lineTo(x - 3.2 * e, y + 3 * e); ctx.closePath(); ctx.fill();
+    };
+    const bloco = (x0, y0, x1, y1) => { ctx.fillRect(x0, y0, x1 - x0, y1 - y0); };
+    const alvo = (x, y, r0) => {
+      ctx.save(); L(1.5); ctx.beginPath(); ctx.arc(x, y, r0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x, y, r0 * 0.45, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    };
     switch (nome) {
       // ----- Remate -----
       case 'Remate Colocado':   // Finesse Shot: bola em arco para o canto da baliza
@@ -204,9 +212,9 @@ const Hud = (() => {
         baliza(3, -7, 14, 9); L(1.6); ctx.beginPath(); ctx.moveTo(-14, 9.5); ctx.lineTo(14, 9.5); ctx.stroke();
         bola(-9, 5.5, 3.6); seta([-5, 6, 10, 6]); break;
       case 'Chapéu':            // Chip Shot: bola por cima do guarda-redes
-        baliza(4, -2, 14, 9); jogador(8, 8, 0.75, 0, 2.6, -2.6); bola(-10, 7, 3.2); seta([-8, 3, 0, -16, 9, -3], true); break;
+        baliza(3, -2, 14, 9); bola(-10, 7, 3.2); seta([-8, 3, -1, -17, 8, 1], true); break;
       case 'Bola Parada':       // Dead Ball: bola por cima da barreira
-        baliza(4, -12, 14, -3); for (const bx of [-3, 0, 3]) jogador(bx, 4, 0.5, 0, 0.2, -0.2, 0.1, -0.1);
+        baliza(4, -12, 14, -3); bloco(-5, 0, 3, 6);
         bola(-10, 10, 3.2); seta([-8, 6, -4, -14, 7, -6], true); break;
       case 'Trivela':           // Trivela: bota a bater com a parte de fora, bola em curva
         bota(-5, 6, 0.9, 0.3); bola(5, 4, 3.6); seta([7, 0, 14, -8, 4, -12]); break;
@@ -223,14 +231,14 @@ const Hud = (() => {
         } break;
       // ----- Passe -----
       case 'Passe Incisivo':    // Incisive Pass: passe a passar entre dois defesas
-        jogador(-1, -5, 0.55); jogador(-1, 9, 0.55); bola(-11, 2, 3); seta([-7, 2, 13, 2]); break;
+        cone(1, -6); cone(1, 11); bola(-11, 2, 3); seta([-7, 2, 13, 2]); break;
       case 'Passe Tenso':       // Pinged Pass: passe forte e direito
         bola(-7, 0, 4); velocidade(-12, 0, 3, 4); seta([-2, -3, 13, -3]); seta([-2, 3, 13, 3]); break;
       case 'Passe Longo':       // Long Ball Pass: passe longo pelo ar
-        bola(-11, 9, 3); seta([-9, 5, 0, -18, 12, 8], true); jogador(12, 10, 0.5); break;
+        bola(-11, 9, 3); seta([-9, 5, 0, -18, 10, 6], true); alvo(10, 9, 3.6); break;
       case 'Tiki-Taka':         // Tiki Taka: passes curtos entre três jogadores
-        jogador(-10, 9, 0.5); jogador(10, 9, 0.5); jogador(0, -6, 0.5);
-        seta([-7, 4, -2, -3]); seta([3, -3, 8, 4]); bola(0, 9, 2.6); break;
+        bola(-9, 8, 3); bola(9, 8, 3); bola(0, -7, 3);
+        seta([-7, 4, -3, -2]); seta([3, -3, 7, 4]); seta([6, 8, -5, 8]); break;
       case 'Cruzamento Tenso':  // Whipped Pass: cruzamento da ala para a área
         baliza(-4, -13, 6, -6); bola(-12, 10, 3); seta([-9, 7, 14, 2, 1, -4]); break;
       case 'Inventivo':         // Inventive: passe de calcanhar / lâmpada
@@ -239,21 +247,23 @@ const Hud = (() => {
       // ----- Defesa -----
       case 'Intercetor':        // Intercept: passe cortado
         bola(-11, 0, 3); seta([-7, 0, 3, 0], true, false);
-        L(2.4); ctx.beginPath(); ctx.moveTo(6, -10); ctx.lineTo(6, 10); ctx.stroke(); jogador(11, 8, 0.5); break;
+        L(2.4); ctx.beginPath(); ctx.moveTo(6, -10); ctx.lineTo(6, 10); ctx.stroke(); seta([6, 0, 9, -9]); break;
       case 'Bloqueio':          // Block: perna esticada a bloquear o remate
-        jogador(4, 9, 0.85, -0.2, 0.6, -0.8, 1.3, -0.3); bola(-10, 3, 3.6); velocidade(-14, 3, 2, 3); break;
+        bloco(3, -10, 7, 10); bola(-6, 0, 3.8); velocidade(-10, 0, 2, 4); seta([-2, -5, -10, -11]); break;
       case 'Antecipação':       // Anticipate: olho atento à bola
         ctx.moveTo(-12, -2); ctx.quadraticCurveTo(-2, -12, 8, -2); ctx.quadraticCurveTo(-2, 8, -12, -2); ctx.fill();
         ctx.save(); ctx.fillStyle = escuro; ctx.shadowBlur = 0; ctx.beginPath(); ctx.arc(-2, -2, 3.2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
         bola(10, 8, 3.4); break;
       case 'Carrinho':          // Slide Tackle: jogador a deslizar para a bola
         L(1.4); ctx.moveTo(-14, 11); ctx.lineTo(14, 11); ctx.stroke();
-        jogador(-2, 9, 0.9, -1.25, 0.4, -1.2, 0.5, 0.1); bola(10, 7.5, 3.2); break;
+        bota(-2, 6, 1, 0); velocidade(-8, 6, 3, 6); bola(10, 7, 3.2); break;
       case 'Marcação':          // Jockey: defesa de lado, a acompanhar
-        jogador(-4, 8, 0.9, 0.15, 1.2, -1.2, 0.6, -0.6); bola(9, 8, 3.2);
+        bota(-5, 7, 0.9); bola(8, 6, 3.6);
         seta([-12, -10, -4, -10]); seta([4, -10, 12, -10]); break;
       case 'Fortaleza Aérea':   // Aerial Fortress: salta mais alto pela bola
-        jogador(0, 10, 0.9, 0, 2.7, -2.7, 0.25, -0.25); bola(0, -11, 3.4); break;
+        // torre de castelo com a bola no ar por cima
+        ctx.fillRect(-6, -1, 12, 13); for (const tx of [-6, -1.5, 3]) ctx.fillRect(tx, -5, 3, 4);
+        bola(0, -11, 3.4); seta([0, -1.5, 0, -6], false, false); break;
       case 'Muralha':           // Bruiser: escudo com uma bola
         ctx.moveTo(0, -13); ctx.lineTo(11, -8); ctx.lineTo(9, 5); ctx.lineTo(0, 13);
         ctx.lineTo(-9, 5); ctx.lineTo(-11, -8); ctx.closePath(); ctx.fill();
@@ -266,7 +276,7 @@ const Hud = (() => {
         ctx.moveTo(1, -14); ctx.lineTo(-8, 1); ctx.lineTo(-1, 1); ctx.lineTo(-4, 13); ctx.lineTo(6, -3); ctx.lineTo(0, -3); ctx.closePath(); ctx.fill();
         bola(9, 9, 3.4); break;
       case 'Arranque Rápido':   // Quick Step: jogador a arrancar
-        jogador(2, 8, 1, 0.45, 1.1, -0.9, 0.9, -0.7); velocidade(-6, -1, 3, 7); break;
+        bota(2, 6, 1, -0.2); velocidade(-6, 2, 3, 7); seta([-4, -9, 12, -9]); break;
       case 'Primeiro Toque':    // First Touch: bota a amortecer a bola
         bota(-3, 8, 0.9); bola(4, -3, 4); seta([4, -14, 4, -9]); break;
       case 'Habilidoso':        // Trickster: pé por cima da bola (bicicleta)
@@ -282,22 +292,25 @@ const Hud = (() => {
         bola(0, 0, 4.8); L(1.6); ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI * 2); ctx.stroke();
         seta([-14, -9, -9, -5]); seta([14, -9, 9, -5]); seta([0, 14, 0, 9.5]); break;
       case 'Intimidador':       // Enforcer: ombro contra ombro
-        jogador(-4, 9, 0.9, 0.35); jogador(5, 9, 0.9, -0.35); bola(0, 11, 2.4); break;
+        seta([-13, -2, -2, -2]); seta([13, -2, 2, -2]); L(1.6); ctx.beginPath();
+        for (const [x0, y0, x1, y1] of [[-3, -9, -1, -6], [3, -9, 1, -6], [0, -11, 0, -7]]) { ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); }
+        ctx.stroke(); bola(0, 8, 3.6); break;
       case 'Incansável':        // Relentless: infinito
         L(2.6); ctx.moveTo(0, 0);
         ctx.bezierCurveTo(-4, -7, -13, -7, -13, 0); ctx.bezierCurveTo(-13, 7, -4, 7, 0, 0);
         ctx.bezierCurveTo(4, -7, 13, -7, 13, 0); ctx.bezierCurveTo(13, 7, 4, 7, 0, 0); ctx.stroke(); break;
       case 'Lançamento Longo':  // Long Throw: lançamento lateral com a bola por cima da cabeça
-        jogador(-3, 10, 0.9, -0.15, 2.9, -2.9, 0.3, -0.3); bola(-4, -12, 3); seta([1, -12, 12, -14, 13, -2], true); break;
+        L(1.6); ctx.beginPath(); ctx.moveTo(-12, 11); ctx.lineTo(-12, -6); ctx.stroke();   // linha lateral
+        bola(-9, -8, 3.4); seta([-5, -10, 6, -18, 13, 4], true); break;
       // ----- Guarda-redes -----
       case 'Reflexos':          // Quick Reflexes: luva rápida à frente da bola
         luva(-3, 2, 1.05); bola(9, -6, 3.6); velocidade(15, -6, 2, -4); break;
       case 'Alcance':           // Far Reach: mergulho até ao canto
-        baliza(-14, -12, 14, 10); jogador(-2, 6, 0.85, 1.15, 0.2, 0.1, 0.2, 0.0); luva(9, -5, 0.55, 1.2); bola(12, -8, 2.6); break;
+        baliza(-14, -12, 14, 10); seta([-6, 6, 4, -3]); luva(7, -5, 0.6, 0.8); bola(11, -8, 2.6); break;
       case 'Corta Cruzamentos': // Cross Claimer: duas luvas a agarrar a bola no ar
         bola(0, -7, 4.5); luva(-7, 5, 0.75, -0.4); luva(7, 5, 0.75, 0.4); break;
       case 'Sai aos Pés':       // Rush Out: GR sai da baliza para a bola
-        baliza(-14, -10, -6, 8); jogador(0, 8, 0.85, 0.5, 1.4, -0.8, 0.9, -0.6); bola(11, 8, 3); velocidade(-4, -2, 2, 5); break;
+        baliza(-14, -10, -6, 8); luva(0, 2, 0.7); velocidade(-4, 2, 2, 4); seta([5, 2, 10, 2]); bola(12, 7, 3); break;
       case 'Lançamento Longo GR':   // Far Throw: luva a lançar longe
         luva(-8, 6, 0.8, -0.5); bola(-2, -4, 3); seta([1, -6, 7, -14, 14, -5], true); break;
       case 'Jogo de Pés':       // Footwork: bota do GR a jogar a bola
