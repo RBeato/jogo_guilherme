@@ -120,6 +120,16 @@ Escolhe-se no ecrã inicial com as setas: Estádio da Luz, Estádio do Dragão, 
 Santiago Bernabéu, Wembley (com o arco), Allianz Arena (faixa vermelha), Maracanã.
 São inspirados nos verdadeiros (cores das cadeiras, telhado, dia/noite), não são cópias exatas.
 
+## 4a. Realismo (aspeto e movimento)
+
+- Jogadores com proporções de atleta (cabeça ≈ 1/7 da altura, cabeça oval), coxas e barrigas das
+  pernas com forma de músculo, calções com duas pernas, meias até ao joelho, braços com músculo.
+- Relva mais escura com textura fina de folhas; cantos do ecrã escurecidos como na TV.
+- Movimento com peso: os jogadores demoram ~1 s a chegar à velocidade máxima, viram aos poucos
+  (com a bola mais devagar) e abrandam nas curvas apertadas. Depois de uma finta arrancam com
+  mais força. Ao acelerar inclinam-se para a frente.
+- Remate: a perna vai atrás enquanto se carrega e depois chuta para a frente.
+
 ## 4b. Celebrações e narrador
 
 - Depois de marcar, o jogador corre para a câmara e faz a **sua celebração**; a câmara desce e

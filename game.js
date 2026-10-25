@@ -340,6 +340,7 @@ function kick(p, angle, speed, lift = 0) {
   Som.chuto(speed);
   ball.lastTouch = p;
   p.cooldown = 0.3;
+  p.pontape = 0.3;            // para a animação da perna a chutar
   p.holdTime = 0;
   ball.potente = ball.colocado = ball.remate = false;
   shotId++;
@@ -672,7 +673,7 @@ function chaser(team) {
   return best;
 }
 
-function moveTowards(p, tx, ty, speed, dt) {
+function moveTowards(p, tx, ty, speed, dt, rapidez = 4) {
   const dx = tx - p.x, dy = ty - p.y;
   const d = Math.hypot(dx, dy);
   let wantVx = 0, wantVy = 0;
@@ -680,8 +681,8 @@ function moveTowards(p, tx, ty, speed, dt) {
     const s = Math.min(speed, d * 4);
     wantVx = dx / d * s; wantVy = dy / d * s;
   }
-  p.vx += (wantVx - p.vx) * Math.min(1, dt * 8);
-  p.vy += (wantVy - p.vy) * Math.min(1, dt * 8);
+  p.vx += (wantVx - p.vx) * Math.min(1, dt * rapidez);
+  p.vy += (wantVy - p.vy) * Math.min(1, dt * rapidez);
 }
 
 function updateGoalkeeper(p, dt) {
@@ -713,7 +714,7 @@ function updateGoalkeeper(p, dt) {
     tx = goalX + dir * 22;
     ty = clamp(H / 2 + (ball.y - H / 2) * 0.4, H / 2 - GOAL_W / 2 + 12, H / 2 + GOAL_W / 2 - 12);
   }
-  moveTowards(p, tx, ty, 150 * RITMO, dt);
+  moveTowards(p, tx, ty, 150 * RITMO, dt, 8);
   p.facing = Math.atan2(ball.y - p.y, ball.x - p.x);
 }
 
@@ -741,7 +742,7 @@ function updateAI(p, dt) {
   moveTowards(p, target.x, target.y, 140 * RITMO * (0.86 + atr(p, 'rit') / 100 * 0.25) * (1 + 0.03 * ps(p, 'Rápido')) *
     nivelEquipa(p, 'vel', 1), dt);
   const sp = Math.hypot(p.vx, p.vy);
-  if (sp > 20) p.facing = Math.atan2(p.vy, p.vx);
+  if (sp > 20) p.facing = rodarPara(p.facing, Math.atan2(p.vy, p.vx), dt * 9);
 }
 
 function updateHuman(p, t, dt) {
@@ -1019,7 +1020,8 @@ function moverFinta(p, speed, dt) {
     p.mira = p.facing;
     p.vx *= 0.85; p.vy *= 0.85;
   } else if (t === 'bicicleta') {
-    p.vx *= 0.9; p.vy *= 0.9;
+    // Passa as pernas por cima da bola enquanto vai andando devagar
+    p.vx *= 0.96; p.vy *= 0.96;
   }
   const v = Math.hypot(p.vx, p.vy), max = speed * 1.1;
   if (v > max) { p.vx *= max / v; p.vy *= max / v; }
@@ -1034,10 +1036,17 @@ function velocidadeCPU(p) {
 }
 
 // Corre numa direção (vira-se aos poucos, como os humanos)
+// Movimento com peso, como no FC: o jogador demora a ganhar velocidade, vira aos poucos
+// (com a bola ainda mais devagar) e abranda quando faz uma curva apertada
 function correrPara(p, ang, vel, dt) {
   p.mira = ang;
-  p.facing = rodarPara(p.facing, ang, (ball.owner === p ? 8 : 13) * dt);
-  const arranque = 7 + 1.5 * ps(p, 'Arranque Rápido') + ps(p, 'Rápido');
+  const comBola = ball.owner === p;
+  const curva = angDiff(p.facing, ang);
+  p.facing = rodarPara(p.facing, ang, (comBola ? 5.5 + 0.8 * ps(p, 'Habilidoso') : 9) * dt);
+  vel *= 1 - 0.45 * Math.min(1, curva / (Math.PI * 0.75));
+  let arranque = 3.2 + 0.8 * ps(p, 'Arranque Rápido') + 0.4 * ps(p, 'Rápido');
+  // Logo a seguir a uma finta, arranca com mais força (para fugir ao defesa enganado)
+  if (p.posFinta > 0 && p.finta <= 0) arranque *= 2.2;
   p.vx += (Math.cos(p.facing) * vel - p.vx) * Math.min(1, dt * arranque);
   p.vy += (Math.sin(p.facing) * vel - p.vy) * Math.min(1, dt * arranque);
 }
@@ -1165,7 +1174,7 @@ function updateCPU(p, dt) {
   if (ball.owner && ball.owner.team === p.team) {
     const t = aiTarget(p);
     moveTowards(p, t.x, t.y, vel, dt);
-    if (Math.hypot(p.vx, p.vy) > 20) p.facing = Math.atan2(p.vy, p.vx);
+    if (Math.hypot(p.vx, p.vy) > 20) p.facing = rodarPara(p.facing, Math.atan2(p.vy, p.vx), dt * 9);
     return;
   }
 
@@ -1759,6 +1768,7 @@ function update(dt) {
 
   for (const p of players) {
     p.cooldown = Math.max(0, p.cooldown - dt);
+    p.pontape = Math.max(0, (p.pontape || 0) - dt);
     p.stun = Math.max(0, p.stun - dt);
     p.perdeuBola = Math.max(0, p.perdeuBola - dt);
     p.cabeceou = Math.max(0, p.cabeceou - dt);
@@ -1832,7 +1842,7 @@ function gravar(dt) {
     bola: { x: ball.x, y: ball.y, z: ball.z, vx: ball.vx, vy: ball.vy },
     jogadores: players.map(p => ({
       ref: p, x: p.x, y: p.y, facing: p.facing, vx: p.vx, vy: p.vy, slide: p.slide, chao: p.chao,
-      cooldown: p.cooldown, mergulho: p.mergulho, mergulhoDir: p.mergulhoDir, team: p.team, cabeceou: p.cabeceou,
+      cooldown: p.cooldown, pontape: p.pontape, mergulho: p.mergulho, mergulhoDir: p.mergulhoDir, team: p.team, cabeceou: p.cabeceou,
       finta: p.finta, fintaLado: p.fintaLado, fintaTipo: p.fintaTipo,
     })),
     arbitros: arbitros.map(a => ({ ...a, ref: a })),

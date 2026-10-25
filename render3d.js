@@ -672,7 +672,7 @@ const Render = (() => {
     // Cabeça (num grupo próprio, para poder olhar para a bola)
     const cabeca = new THREE.Group();
     cabeca.position.set(0.1, 23.3, 0);
-    cabeca.scale.setScalar(0.84);
+    cabeca.scale.set(0.84 * 0.95, 0.84 * 1.1, 0.84 * 0.9);   // cabeça oval, mais alta do que larga
     const queixo = mesh(geo.queixo, kit.pele, 0.45, -0.75, 0);
     queixo.scale.set(1, 0.9, 1.05);
     cabeca.add(mesh(geo.cabeca, kit.pele), queixo,
@@ -794,9 +794,14 @@ const Render = (() => {
       m.ancas[i].rotation.set(0, 0, Math.sin(fase) * amp * 0.9 + 0.05);
       m.joelhos[i].rotation.z = -0.1 - amp * (0.15 + 1.2 * Math.max(0, Math.cos(fase)));
       m.ombros[i].rotation.set(-lado * 0.12, 0, -Math.sin(fase) * amp * 0.8 + resp);
-      m.cotovelos[i].rotation.z = 0.25 + amp * 0.9;
+      m.cotovelos[i].rotation.z = 0.25 + amp * 1.25;        // a correr, cotovelos quase a 90°
     }
     m.corpo.rotation.z = -amp * 0.16;                        // inclina-se para a frente a correr
+    // Ao acelerar inclina-se mais para a frente; ao travar, para trás
+    const acelAgora = (vel - (m.velAntes === undefined ? vel : m.velAntes)) / Math.max(dt, 0.001);
+    m.velAntes = vel;
+    m.acel = (m.acel || 0) + (acelAgora - (m.acel || 0)) * Math.min(1, dt * 6);
+    m.corpo.rotation.z -= clamp(m.acel / 900, -0.14, 0.18);
     // Inclina-se para dentro das curvas
     let viragem = d.facing - (m.ultimaDir === undefined ? d.facing : m.ultimaDir);
     while (viragem > Math.PI) viragem -= 2 * Math.PI;
@@ -853,10 +858,19 @@ const Render = (() => {
       m.cotovelos[0].rotation.z = m.cotovelos[1].rotation.z = 0.1;
       m.cabeca.rotation.set(0, 0, 0.4);
     } else if (pose === 'chuto') {
-      // Chuta a correr: só a perna direita e os braços mudam, o resto continua a correr
-      m.ancas[1].rotation.z = 1.2;
-      m.joelhos[1].rotation.z = -0.15;
-      m.ombros[0].rotation.set(-0.5, 0, 0.6); m.ombros[1].rotation.set(0.5, 0, -0.5);
+      // Chuta a correr: a perna direita vai de trás para a frente e continua depois do toque;
+      // os braços abrem para equilibrar. O resto continua a correr.
+      const k = clamp((0.3 - d.pontape) / 0.27, 0, 1);
+      m.ancas[1].rotation.z = -0.7 + 2.1 * k;
+      m.joelhos[1].rotation.z = -1.3 * (1 - k) - 0.25 * Math.sin(k * Math.PI);
+      m.ombros[0].rotation.set(0.7, 0, 0.5 * k); m.ombros[1].rotation.set(-0.6, 0, -0.4 * k);
+      m.corpo.rotation.z = 0.12 * k - 0.1;
+    } else if (pose === 'preparar') {
+      // A carregar o remate: a perna direita vai atrás, os braços abrem (continua a correr com a outra)
+      const c = d.carga || 0;
+      m.ancas[1].rotation.z = -0.25 - 0.6 * c;
+      m.joelhos[1].rotation.z = -0.6 - 0.9 * c;
+      m.ombros[0].rotation.set(0.4 + 0.4 * c, 0, 0.3); m.ombros[1].rotation.set(-0.4 - 0.3 * c, 0, -0.2);
     } else if (pose === 'cabeca') {
       m.corpo.position.y = 3;
       m.corpo.rotation.z = -0.35;
@@ -921,9 +935,10 @@ const Render = (() => {
       }
     } else if (tipo === 'bracos') {
       // Braços cruzados à frente do peito, muito sério
+      // braço um pouco para a frente, antebraço dobrado e virado para dentro (cruza à frente do peito)
       for (let i = 0; i < 2; i++) {
-        m.ombros[i].rotation.set(-L[i] * 0.55, 0, 1.0);
-        m.cotovelos[i].rotation.z = 1.9;
+        m.ombros[i].rotation.set(-L[i] * 0.12, -L[i] * (0.95 + 0.1 * i), 0.55);
+        m.cotovelos[i].rotation.z = 1.75;
       }
       m.cabeca.rotation.z = 0.12;
     } else if (tipo === 'meditar') {
@@ -1055,7 +1070,11 @@ const Render = (() => {
       else if (d.mergulho > 0) pose = 'mergulho';
       else if (!v.replay && (state === 'golo' ? p.team === lastScorer : state === 'fim' && p.team === vencedor)) pose = 'festa';
       else if (d.cabeceou > 0) pose = 'cabeca';
-      else if (d.cooldown > 0.2) pose = 'chuto';
+      else if (d.pontape > 0.03) pose = 'chuto';
+      else if (!v.replay && ball.owner === p && human.indexOf(p) >= 0 && charging[human.indexOf(p)]) {
+        pose = 'preparar';
+        d.carga = charge[human.indexOf(p)];
+      }
       else if (p.gk && (p.team === 0 ? b.x < 330 : b.x > W - 330) && Math.hypot(d.vx, d.vy) < 90 &&
                !(ball.owner === p)) pose = 'guarda';
       const celebra = !v.replay && state === 'golo' && festejo && festejo.p === p;
